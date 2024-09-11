@@ -1,7 +1,6 @@
 {
   "name": "openapi-gen",
   "version": "0.0.0",
-  "type": "module",
   "description": "",
   "packageManager": "pnpm@9.9.0",
   "scripts": {
