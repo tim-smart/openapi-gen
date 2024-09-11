@@ -1,15 +1,27 @@
 {
   "name": "openapi-gen",
   "version": "0.0.0",
-  "description": "",
-  "packageManager": "pnpm@9.9.0",
+  "description": "Generate Effect http clients from OpenAPI specs",
+  "packageManager": "pnpm@9.10.0",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "version": "changeset version",
+    "release": "pnpm run build && changeset publish",
+    "test": "pnpm coverage",
+    "clean": "rm -rf dist/*",
+    "build": "tsup && pnpm copy-package-json",
+    "build:ts": "tsup",
+    "copy-package-json": "tsx scripts/copy-package-json.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tim-smart/openapi-gen.git"
   },
   "keywords": [],
   "author": "Tim Smart <hello@timsmart.co>",
   "license": "MIT",
   "devDependencies": {
+    "@changesets/changelog-github": "^0.5.0",
+    "@changesets/cli": "^2.27.8",
     "@effect/cli": "https://pkg.pr.new/Effect-TS/effect/@effect/cli@e2ff4b9",
     "@effect/platform": "https://pkg.pr.new/Effect-TS/effect/@effect/platform@e2ff4b9",
     "@effect/platform-node": "https://pkg.pr.new/Effect-TS/effect/@effect/platform-node@e2ff4b9",
