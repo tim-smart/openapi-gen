@@ -1,0 +1,25 @@
+{
+  "name": "openapi-gen",
+  "version": "0.0.0",
+  "type": "module",
+  "description": "",
+  "packageManager": "pnpm@9.9.0",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Tim Smart <hello@timsmart.co>",
+  "license": "MIT",
+  "devDependencies": {
+    "@effect/cli": "https://pkg.pr.new/Effect-TS/effect/@effect/cli@e2ff4b9",
+    "@effect/platform": "https://pkg.pr.new/Effect-TS/effect/@effect/platform@e2ff4b9",
+    "@effect/platform-node": "https://pkg.pr.new/Effect-TS/effect/@effect/platform-node@e2ff4b9",
+    "@effect/schema": "https://pkg.pr.new/Effect-TS/effect/@effect/schema@e2ff4b9",
+    "@types/node": "^22.5.4",
+    "effect": "https://pkg.pr.new/Effect-TS/effect@e2ff4b9",
+    "prettier": "^3.3.3",
+    "tsup": "^8.2.4",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.2"
+  }
+}
