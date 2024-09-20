@@ -238,12 +238,17 @@ const operationsToImpl = (
   name: string,
   operations: ReadonlyArray<ParsedOperation>,
 ) => `export const make = (httpClient: HttpClient.HttpClient.Service): ${name} => {
-  const unexpectedStatus = (request: HttpClientRequest.HttpClientRequest, response: HttpClientResponse.HttpClientResponse) => Effect.fail(new HttpClientError.ResponseError({
-    request,
-    response,
-    reason: "StatusCode",
-    description: "Unexpected status code"
-  }))
+  const unexpectedStatus = (request: HttpClientRequest.HttpClientRequest, response: HttpClientResponse.HttpClientResponse) =>
+    Effect.flatMap(
+      Effect.orElseSucceed(response.text, () => "Unexpected status code"),
+      (description) =>
+        Effect.fail(new HttpClientError.ResponseError({
+          request,
+          response,
+          reason: "StatusCode",
+          description
+        }))
+    )
   const decodeError = <A, I, R>(response: HttpClientResponse.HttpClientResponse, schema: S.Schema<A, I, R>) => Effect.flatMap(HttpClientResponse.schemaBodyJson(schema)(response), Effect.fail)
   return {
     ${operations.map(operationToImpl).join(",\n  ")}
