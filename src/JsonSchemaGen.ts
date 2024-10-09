@@ -4,6 +4,7 @@ import * as Context from "effect/Context"
 import * as Option from "effect/Option"
 import * as Arr from "effect/Array"
 import { pipe } from "effect/Function"
+import { identifier } from "./Utils"
 
 const make = Effect.gen(function* () {
   const store = new Map<string, JsonSchema.JsonSchema>()
@@ -22,7 +23,7 @@ const make = Effect.gen(function* () {
           return
         }
         const path = schema.$ref.slice(2).split("/")
-        const name = path[path.length - 1]
+        const name = identifier(path[path.length - 1])
         if (store.has(name)) {
           return
         }
@@ -58,7 +59,7 @@ const make = Effect.gen(function* () {
     }
     if ("$ref" in root) {
       addRefs(root, false)
-      return root.$ref.split("/").pop()!
+      return identifier(root.$ref.split("/").pop()!)
     } else {
       addRefs(root)
       store.set(name, root)
@@ -203,7 +204,7 @@ const make = Effect.gen(function* () {
       if (!schema.$ref.startsWith("#")) {
         return Option.none()
       }
-      const name = schema.$ref.split("/").pop()!
+      const name = identifier(schema.$ref.split("/").pop()!)
       return Option.some(name)
     } else if ("properties" in schema) {
       return toSource(S, { type: "object", ...schema } as any, topLevel)

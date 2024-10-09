@@ -6,9 +6,9 @@ import {
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import { JsonSchemaGen } from "./JsonSchemaGen.js"
-import * as String from "effect/String"
 import { JsonSchema7Object } from "@effect/schema/JSONSchema"
 import { DeepMutable } from "effect/Types"
+import { camelize, identifier } from "./Utils.js"
 
 const methodNames: ReadonlyArray<OpenAPISpecMethodName> = [
   "get",
@@ -172,9 +172,6 @@ export class OpenApi extends Effect.Tag("OpenApi")<
   static Live = Layer.effect(OpenApi, make)
 }
 
-const identifier = (operationId: string) =>
-  String.capitalize(camelize(operationId))
-
 const processPath = (path: string) => {
   const ids: Array<string> = []
   path = path.replace(/{([^}]+)}/g, (_, name) => {
@@ -316,27 +313,4 @@ const operationToImpl = (operation: ParsedOperation) => {
     `HttpClientRequest.make("${operation.method.toUpperCase()}")(${operation.pathTemplate})` +
     `.pipe(\n    ${pipeline.join(",\n    ")}\n  )`
   )
-}
-
-export const camelize = (self: string): string => {
-  let str = ""
-  let hadSymbol = false
-  for (let i = 0; i < self.length; i++) {
-    const charCode = self.charCodeAt(i)
-    if (
-      (charCode >= 65 && charCode <= 90) ||
-      (charCode >= 97 && charCode <= 122)
-    ) {
-      str += hadSymbol ? self[i].toUpperCase() : self[i]
-      hadSymbol = false
-    } else if (charCode >= 48 && charCode <= 57) {
-      if (str.length > 0) {
-        str += self[i]
-        hadSymbol = true
-      }
-    } else if (str.length > 0) {
-      hadSymbol = true
-    }
-  }
-  return str
 }
