@@ -1,5 +1,11 @@
 # @tim-smart/openapi-gen
 
+## 0.1.2
+
+### Patch Changes
+
+- [`2f21fb1`](https://github.com/tim-smart/openapi-gen/commit/2f21fb1f7cb6ab92809dd72fb65bfb5c83d729cc) Thanks [@tim-smart](https://github.com/tim-smart)! - use response text in unexpected status errors
+
 ## 0.1.1
 
 ### Patch Changes
