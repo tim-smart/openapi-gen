@@ -1,5 +1,11 @@
 # @tim-smart/openapi-gen
 
+## 0.2.1
+
+### Patch Changes
+
+- [`9077937`](https://github.com/tim-smart/openapi-gen/commit/907793717afa3a78ed12e1b7d1cf96867d812a05) Thanks [@tim-smart](https://github.com/tim-smart)! - camelize schema names
+
 ## 0.2.0
 
 ### Minor Changes
