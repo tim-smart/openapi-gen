@@ -25,17 +25,17 @@
   "license": "MIT",
   "devDependencies": {
     "@changesets/changelog-github": "^0.5.0",
-    "@changesets/cli": "^2.27.8",
-    "@effect/cli": "https://pkg.pr.new/Effect-TS/effect/@effect/cli@e2ff4b9",
-    "@effect/platform": "https://pkg.pr.new/Effect-TS/effect/@effect/platform@e2ff4b9",
-    "@effect/platform-node": "https://pkg.pr.new/Effect-TS/effect/@effect/platform-node@e2ff4b9",
-    "@effect/schema": "https://pkg.pr.new/Effect-TS/effect/@effect/schema@e2ff4b9",
-    "@types/node": "^22.5.4",
-    "effect": "https://pkg.pr.new/Effect-TS/effect@e2ff4b9",
+    "@changesets/cli": "^2.27.9",
+    "@effect/cli": "^0.47.0",
+    "@effect/platform": "^0.68.0",
+    "@effect/platform-node": "^0.63.0",
+    "@effect/schema": "^0.75.2",
+    "@types/node": "^22.7.5",
+    "effect": "^3.9.1",
     "prettier": "^3.3.3",
-    "tsup": "^8.2.4",
-    "tsx": "^4.19.0",
-    "typescript": "^5.6.2"
+    "tsup": "^8.3.0",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.3"
   },
   "dependencies": {
     "yaml": "^2.5.1"

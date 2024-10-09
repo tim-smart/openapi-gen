@@ -1,22 +1,22 @@
 import * as Effect from "effect/Effect"
-import * as JSONSchema from "@effect/schema/JSONSchema"
+import * as JsonSchema from "@effect/platform/OpenApiJsonSchema"
 import * as Context from "effect/Context"
 import * as Option from "effect/Option"
 import * as Arr from "effect/Array"
 import { pipe } from "effect/Function"
 
 const make = Effect.gen(function* () {
-  const store = new Map<string, JSONSchema.JsonSchema7>()
+  const store = new Map<string, JsonSchema.JsonSchema>()
   const classes = new Set<string>()
-  const refStore = new Map<string, JSONSchema.JsonSchema7>()
+  const refStore = new Map<string, JsonSchema.JsonSchema>()
 
   const addSchema = (
     name: string,
-    root: JSONSchema.JsonSchema7,
+    root: JsonSchema.JsonSchema,
     context?: object,
     asStruct = false,
   ): string => {
-    function addRefs(schema: JSONSchema.JsonSchema7, asStruct = true) {
+    function addRefs(schema: JsonSchema.JsonSchema, asStruct = true) {
       if ("$ref" in schema) {
         if (!schema.$ref.startsWith("#")) {
           return
@@ -26,13 +26,13 @@ const make = Effect.gen(function* () {
         if (store.has(name)) {
           return
         }
-        let current: JSONSchema.JsonSchema7 = {
+        let current: JsonSchema.JsonSchema = {
           ...root,
           ...context,
         }
         for (const key of path) {
           if (!current) return
-          current = (current as any)[key] as JSONSchema.JsonSchema7
+          current = (current as any)[key] as JsonSchema.JsonSchema
         }
         refStore.set(schema.$ref, current)
         addRefs(current)
@@ -72,7 +72,7 @@ const make = Effect.gen(function* () {
   const topLevelSource = (
     S: string,
     name: string,
-    schema: JSONSchema.JsonSchema7,
+    schema: JsonSchema.JsonSchema,
   ): Option.Option<string> => {
     const isClass = classes.has(name)
     return toSource(S, schema, isClass).pipe(
@@ -88,11 +88,11 @@ const make = Effect.gen(function* () {
 
   const toSource = (
     S: string,
-    schema: JSONSchema.JsonSchema7,
+    schema: JsonSchema.JsonSchema,
     topLevel = false,
   ): Option.Option<string> => {
     if ("properties" in schema) {
-      const obj = schema as JSONSchema.JsonSchema7Object
+      const obj = schema as JsonSchema.Object
       const required = obj.required ?? []
       const properties = pipe(
         Object.entries(obj.properties ?? {}),
@@ -209,7 +209,7 @@ const make = Effect.gen(function* () {
       return toSource(S, { type: "object", ...schema } as any, topLevel)
     } else if ("allOf" in schema) {
       const sources = pipe(
-        (schema as any).allOf as Array<JSONSchema.JsonSchema7>,
+        (schema as any).allOf as Array<JsonSchema.JsonSchema>,
         Arr.filterMap((_) => toSource(S, _)),
       )
       if (sources.length === 0) {
@@ -226,8 +226,8 @@ const make = Effect.gen(function* () {
     } else if ("anyOf" in schema || "oneOf" in schema) {
       const sources = pipe(
         "anyOf" in schema
-          ? (schema.anyOf as Array<JSONSchema.JsonSchema7>)
-          : (schema.oneOf as Array<JSONSchema.JsonSchema7>),
+          ? (schema.anyOf as Array<JsonSchema.JsonSchema>)
+          : (schema.oneOf as Array<JsonSchema.JsonSchema>),
         Arr.filterMap((_) => toSource(S, _)),
       )
       if (sources.length === 0) return Option.none()
@@ -266,8 +266,8 @@ const make = Effect.gen(function* () {
     }
 
   const itemsSchema = (
-    schema: JSONSchema.JsonSchema7Array["items"],
-  ): JSONSchema.JsonSchema7 => {
+    schema: JsonSchema.Array["items"],
+  ): JsonSchema.JsonSchema => {
     if (schema === undefined) {
       return { $id: "/schemas/any" }
     } else if (Array.isArray(schema)) {

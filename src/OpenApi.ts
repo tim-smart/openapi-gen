@@ -237,7 +237,7 @@ const operationToMethod = (operation: ParsedOperation) => {
 const operationsToImpl = (
   name: string,
   operations: ReadonlyArray<ParsedOperation>,
-) => `export const make = (httpClient: HttpClient.HttpClient.Service): ${name} => {
+) => `export const make = (httpClient: HttpClient.HttpClient): ${name} => {
   const unexpectedStatus = (request: HttpClientRequest.HttpClientRequest, response: HttpClientResponse.HttpClientResponse) =>
     Effect.flatMap(
       Effect.orElseSucceed(response.text, () => "Unexpected status code"),
