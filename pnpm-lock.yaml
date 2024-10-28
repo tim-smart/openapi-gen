@@ -27,9 +27,6 @@ importers:
       '@effect/platform-node':
         specifier: ^0.64.10
         version: 0.64.10(@effect/platform@0.69.9(effect@3.10.4))(effect@3.10.4)
-      '@effect/schema':
-        specifier: ^0.75.5
-        version: 0.75.5(effect@3.10.4)
       '@types/node':
         specifier: ^22.8.2
         version: 22.8.2
@@ -153,11 +150,6 @@ packages:
     peerDependencies:
       '@effect/typeclass': ^0.29.4
       effect: ^3.10.4
-
-  '@effect/schema@0.75.5':
-    resolution: {integrity: sha512-TQInulTVCuF+9EIbJpyLP6dvxbQJMphrnRqgexm/Ze39rSjfhJuufF7XvU3SxTgg3HnL7B/kpORTJbHhlE6thw==}
-    peerDependencies:
-      effect: ^3.9.2
 
   '@effect/typeclass@0.29.4':
     resolution: {integrity: sha512-1F6DisZU3I6Udwc1JKWw3Nu5toPCeJ1qlEajRt+E1IxiXfimqBT1X9TLu+z/bde4chQW04z0eo/Gwt5BiFjtPQ==}
@@ -1574,11 +1566,6 @@ snapshots:
     dependencies:
       '@effect/typeclass': 0.29.4(effect@3.10.4)
       effect: 3.10.4
-
-  '@effect/schema@0.75.5(effect@3.10.4)':
-    dependencies:
-      effect: 3.10.4
-      fast-check: 3.22.0
 
   '@effect/typeclass@0.29.4(effect@3.10.4)':
     dependencies:
