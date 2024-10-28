@@ -26,18 +26,17 @@
   "devDependencies": {
     "@changesets/changelog-github": "^0.5.0",
     "@changesets/cli": "^2.27.9",
-    "@effect/cli": "^0.47.0",
-    "@effect/platform": "^0.68.0",
-    "@effect/platform-node": "^0.63.0",
-    "@effect/schema": "^0.75.2",
-    "@types/node": "^22.7.5",
-    "effect": "^3.9.1",
+    "@effect/cli": "^0.48.9",
+    "@effect/platform": "^0.69.9",
+    "@effect/platform-node": "^0.64.10",
+    "@types/node": "^22.8.2",
+    "effect": "^3.10.4",
     "prettier": "^3.3.3",
-    "tsup": "^8.3.0",
-    "tsx": "^4.19.1",
+    "tsup": "^8.3.5",
+    "tsx": "^4.19.2",
     "typescript": "^5.6.3"
   },
   "dependencies": {
-    "yaml": "^2.5.1"
+    "yaml": "^2.6.0"
   }
 }

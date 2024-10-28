@@ -1,5 +1,5 @@
 import * as Effect from "effect/Effect"
-import * as JsonSchema from "@effect/platform/OpenApiJsonSchema"
+import type * as JsonSchema from "@effect/platform/OpenApiJsonSchema"
 import * as Context from "effect/Context"
 import * as Option from "effect/Option"
 import * as Arr from "effect/Array"
@@ -252,12 +252,10 @@ const make = Effect.gen(function* () {
         options.default !== undefined && options.default !== null
           ? `() => ${JSON.stringify(options.default)} as const`
           : undefined
-      if (options.isOptional && options.isNullable) {
-        return `${S}.optionalWith(${source}, { nullable: true${defaultSource ? `, default: ${defaultSource}` : ""} })`
-      } else if (options.isOptional) {
+      if (options.isOptional) {
         return defaultSource
-          ? `${S}.optionalWith(${source}, { default: ${defaultSource} })`
-          : `${S}.optional(${source})`
+          ? `${S}.optionalWith(${source}, { nullable: true, default: ${defaultSource} })`
+          : `${S}.optionalWith(${source}, { nullable: true })`
       }
       const newSource = options.isNullable ? `${S}.NullOr(${source})` : source
       if (defaultSource) {
