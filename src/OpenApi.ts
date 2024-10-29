@@ -1,4 +1,4 @@
-import {
+import type {
   OpenAPISpec,
   OpenAPISpecMethodName,
   OpenAPISpecPathItem,
@@ -6,8 +6,8 @@ import {
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import { JsonSchemaGen } from "./JsonSchemaGen.js"
-import { JsonSchema7Object } from "@effect/schema/JSONSchema"
-import { DeepMutable } from "effect/Types"
+import type * as JsonSchema from "@effect/platform/OpenApiJsonSchema"
+import type { DeepMutable } from "effect/Types"
 import { camelize, identifier } from "./Utils.js"
 
 const methodNames: ReadonlyArray<OpenAPISpecMethodName> = [
@@ -68,7 +68,7 @@ export const make = Effect.gen(function* () {
                 (_) => _.in !== "path" && _.in !== "cookie",
               ) ?? []
             if (validParameters.length > 0) {
-              const schema: JsonSchema7Object = {
+              const schema: JsonSchema.Object = {
                 type: "object",
                 properties: {},
                 required: [],
