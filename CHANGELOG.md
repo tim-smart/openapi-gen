@@ -1,5 +1,11 @@
 # @tim-smart/openapi-gen
 
+## 0.3.0
+
+### Minor Changes
+
+- [`3f6817c`](https://github.com/tim-smart/openapi-gen/commit/3f6817c4af0fa1c75000b2afecd9c026e13ec282) Thanks [@tim-smart](https://github.com/tim-smart)! - make optional fields nullable as well
+
 ## 0.2.1
 
 ### Patch Changes
