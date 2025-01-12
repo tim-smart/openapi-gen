@@ -1,3 +1,5 @@
+#! /usr/bin/env node
+
 import * as Options from "@effect/cli/Options"
 import * as Console from "effect/Console"
 import * as Effect from "effect/Effect"
