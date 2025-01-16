@@ -1,5 +1,11 @@
 # @tim-smart/openapi-gen
 
+## 0.3.1
+
+### Patch Changes
+
+- [#7](https://github.com/tim-smart/openapi-gen/pull/7) [`0fe5256`](https://github.com/tim-smart/openapi-gen/commit/0fe5256b776e82a480fbed44a7340051397c50f0) Thanks [@andrewpeters9](https://github.com/andrewpeters9)! - add hashbang for node.js
+
 ## 0.3.0
 
 ### Minor Changes
