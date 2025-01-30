@@ -9,6 +9,7 @@ import { identifier } from "./Utils"
 const make = Effect.gen(function* () {
   const store = new Map<string, JsonSchema.JsonSchema>()
   const classes = new Set<string>()
+  const enums = new Set<string>()
   const refStore = new Map<string, JsonSchema.JsonSchema>()
 
   const addSchema = (
@@ -17,7 +18,11 @@ const make = Effect.gen(function* () {
     context?: object,
     asStruct = false,
   ): string => {
-    function addRefs(schema: JsonSchema.JsonSchema, asStruct = true) {
+    function addRefs(
+      schema: JsonSchema.JsonSchema,
+      childName: string | undefined,
+      asStruct = true,
+    ) {
       if ("$ref" in schema) {
         if (!schema.$ref.startsWith("#")) {
           return
@@ -36,32 +41,39 @@ const make = Effect.gen(function* () {
           current = (current as any)[key] as JsonSchema.JsonSchema
         }
         refStore.set(schema.$ref, current)
-        addRefs(current)
+        addRefs(current, "properties" in current ? name : undefined)
         store.set(name, current)
         if (!asStruct) {
           classes.add(name)
         }
       } else if ("properties" in schema) {
-        Object.values(schema.properties).forEach((s) => addRefs(s))
+        Object.entries(schema.properties).forEach(([name, s]) =>
+          addRefs(s, childName ? childName + identifier(name) : undefined),
+        )
       } else if ("type" in schema && schema.type === "array") {
         if (Array.isArray(schema.items)) {
-          schema.items.forEach((s) => addRefs(s))
+          schema.items.forEach((s) => addRefs(s, childName))
         } else if (schema.items) {
-          addRefs(schema.items)
+          addRefs(schema.items, childName)
         }
       } else if ("allOf" in schema) {
-        ;(schema as any).allOf.forEach((s: any) => addRefs(s))
+        ;(schema as any).allOf.forEach((s: any) => addRefs(s, childName))
       } else if ("anyOf" in schema) {
-        schema.anyOf.forEach((s) => addRefs(s as any))
+        schema.anyOf.forEach((s) => addRefs(s as any, childName))
       } else if ("oneOf" in schema) {
-        ;(schema as any).oneOf.forEach((s: any) => addRefs(s))
+        ;(schema as any).oneOf.forEach((s: any) => addRefs(s, childName))
+      } else if ("enum" in schema) {
+        if (childName !== undefined) {
+          store.set(childName, schema)
+          enums.add(childName)
+        }
       }
     }
     if ("$ref" in root) {
-      addRefs(root, false)
+      addRefs(root, undefined, false)
       return identifier(root.$ref.split("/").pop()!)
     } else {
-      addRefs(root)
+      addRefs(root, "properties" in root ? name : undefined)
       store.set(name, root)
       if (!asStruct) {
         classes.add(name)
@@ -76,7 +88,8 @@ const make = Effect.gen(function* () {
     schema: JsonSchema.JsonSchema,
   ): Option.Option<string> => {
     const isClass = classes.has(name)
-    return toSource(S, schema, isClass).pipe(
+    const isEnum = enums.has(name)
+    return toSource(S, schema, name, isClass || isEnum).pipe(
       Option.map((source) => {
         const isObject = "properties" in schema
         if (!isObject || !isClass) {
@@ -90,6 +103,7 @@ const make = Effect.gen(function* () {
   const toSource = (
     S: string,
     schema: JsonSchema.JsonSchema,
+    currentIdentifier: string,
     topLevel = false,
   ): Option.Option<string> => {
     if ("properties" in schema) {
@@ -101,7 +115,7 @@ const make = Effect.gen(function* () {
           const fullSchema =
             "$ref" in schema ? refStore.get(schema.$ref)! : schema
           const isOptional = !required.includes(key)
-          return toSource(S, schema).pipe(
+          return toSource(S, schema, currentIdentifier + identifier(key)).pipe(
             Option.map(
               applyAnnotations(S, {
                 isOptional,
@@ -125,6 +139,9 @@ const make = Effect.gen(function* () {
         `${S}.Record({ key: ${S}.String, value: ${S}.Unknown })`,
       )
     } else if ("enum" in schema) {
+      if (!topLevel && enums.has(currentIdentifier)) {
+        return Option.some(currentIdentifier)
+      }
       const items = schema.enum.map((_) => JSON.stringify(_)).join(", ")
       return Option.some(`${S}.Literal(${items})`)
     } else if ("type" in schema) {
@@ -192,7 +209,7 @@ const make = Effect.gen(function* () {
           if ("maxItems" in schema) {
             modifiers.push(`${S}.maxItems(${schema.maxItems})`)
           }
-          return toSource(S, itemsSchema(schema.items)).pipe(
+          return toSource(S, itemsSchema(schema.items), currentIdentifier).pipe(
             Option.map(
               (source) =>
                 `${S}.${nonEmpty ? "NonEmpty" : ""}Array(${source})${pipeSource(modifiers)}`,
@@ -207,11 +224,16 @@ const make = Effect.gen(function* () {
       const name = identifier(schema.$ref.split("/").pop()!)
       return Option.some(name)
     } else if ("properties" in schema) {
-      return toSource(S, { type: "object", ...schema } as any, topLevel)
+      return toSource(
+        S,
+        { type: "object", ...schema } as any,
+        currentIdentifier,
+        topLevel,
+      )
     } else if ("allOf" in schema) {
       const sources = pipe(
         (schema as any).allOf as Array<JsonSchema.JsonSchema>,
-        Arr.filterMap((_) => toSource(S, _)),
+        Arr.filterMap((_) => toSource(S, _, currentIdentifier)),
       )
       if (sources.length === 0) {
         return Option.none()
@@ -229,7 +251,7 @@ const make = Effect.gen(function* () {
         "anyOf" in schema
           ? (schema.anyOf as Array<JsonSchema.JsonSchema>)
           : (schema.oneOf as Array<JsonSchema.JsonSchema>),
-        Arr.filterMap((_) => toSource(S, _)),
+        Arr.filterMap((_) => toSource(S, _, currentIdentifier)),
       )
       if (sources.length === 0) return Option.none()
       else if (sources.length === 1) return Option.some(sources[0])
