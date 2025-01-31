@@ -1,5 +1,11 @@
 # @tim-smart/openapi-gen
 
+## 0.3.2
+
+### Patch Changes
+
+- [`0798d95`](https://github.com/tim-smart/openapi-gen/commit/0798d951d22d3d8ec49584e2f964c0ce7543fa7c) Thanks [@tim-smart](https://github.com/tim-smart)! - emit named enums where possible
+
 ## 0.3.1
 
 ### Patch Changes
