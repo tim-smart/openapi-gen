@@ -234,7 +234,12 @@ const operationToMethod = (operation: ParsedOperation) => {
 const operationsToImpl = (
   name: string,
   operations: ReadonlyArray<ParsedOperation>,
-) => `export const make = (httpClient: HttpClient.HttpClient): ${name} => {
+) => `export const make = (
+  httpClient: HttpClient.HttpClient, 
+  options: {
+    readonly transformClient?: ((client: HttpClient.HttpClient) => Effect.Effect<HttpClient.HttpClient>) | undefined
+  } = {}
+): ${name} => {
   const unexpectedStatus = (request: HttpClientRequest.HttpClientRequest, response: HttpClientResponse.HttpClientResponse) =>
     Effect.flatMap(
       Effect.orElseSucceed(response.text, () => "Unexpected status code"),
@@ -246,6 +251,8 @@ const operationsToImpl = (
           description
         }))
     )
+  const applyClientTransform = (client: HttpClient.HttpClient): Effect.Effect<HttpClient.HttpClient> => 
+    options.transformClient ? options.transformClient(client) : Effect.succeed(client)
   const decodeError = <A, I, R>(response: HttpClientResponse.HttpClientResponse, schema: S.Schema<A, I, R>) => Effect.flatMap(HttpClientResponse.schemaBodyJson(schema)(response), Effect.fail)
   return {
     ${operations.map(operationToImpl).join(",\n  ")}
@@ -303,9 +310,9 @@ const operationToImpl = (operation: ParsedOperation) => {
   })
   decodes.push(`orElse: (response) => unexpectedStatus(request, response)`)
 
-  pipeline.push(`Effect.flatMap(request => Effect.flatMap(httpClient.execute(request), HttpClientResponse.matchStatus({
+  pipeline.push(`Effect.flatMap(request => Effect.flatMap(applyClientTransform(httpClient), (httpClient) => Effect.flatMap(httpClient.execute(request), HttpClientResponse.matchStatus({
       ${decodes.join(",\n      ")}
-    })))`)
+    }))))`)
 
   pipeline.push(`Effect.scoped`)
   return (
