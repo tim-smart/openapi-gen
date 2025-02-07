@@ -1,5 +1,11 @@
 # @tim-smart/openapi-gen
 
+## 0.3.3
+
+### Patch Changes
+
+- [#10](https://github.com/tim-smart/openapi-gen/pull/10) [`3ffde27`](https://github.com/tim-smart/openapi-gen/commit/3ffde272078d2783685525dec3fbbea2057b93b5) Thanks [@IMax153](https://github.com/IMax153)! - Allow optional `HttpClient` transformations to be provided to `Generated.make`
+
 ## 0.3.2
 
 ### Patch Changes
