@@ -279,7 +279,7 @@ const operationToImpl = (operation: ParsedOperation) => {
     }
     if (operation.headers.length > 0) {
       const props = operation.headers.map(
-        (param) => `"${param}": ${varName}["${param}"]`,
+        (param) => `"${param}": ${varName}["${param}"] ?? undefined`,
       )
       pipeline.push(`HttpClientRequest.setHeaders({ ${props.join(", ")} })`)
     }
