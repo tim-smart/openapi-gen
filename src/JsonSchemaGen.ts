@@ -97,12 +97,6 @@ const make = Effect.gen(function* () {
     const isEnum = enums.has(name)
     return toSource(S, schema, name, isClass || isEnum).pipe(
       Option.map((source) => {
-        if (name === "Model") {
-          console.error({
-            name,
-            source,
-          })
-        }
         const isObject = "properties" in schema
         if (!isObject || !isClass) {
           return `export class ${name} extends ${source} {}`
@@ -132,7 +126,8 @@ const make = Effect.gen(function* () {
               applyAnnotations(S, {
                 isOptional,
                 isNullable:
-                  "nullable" in fullSchema && fullSchema.nullable === true,
+                  ("nullable" in fullSchema && fullSchema.nullable === true) ||
+                  ("default" in fullSchema && fullSchema.default === null),
                 default: fullSchema.default,
               }),
             ),
@@ -282,6 +277,11 @@ const make = Effect.gen(function* () {
       },
     ) =>
     (source: string): string => {
+      // Handle the special case where the `default` value of the property
+      // was set to `null`, but the property was not properly marked as `nullable`
+      if (options.isNullable && options.default === null) {
+        return `${S}.optionalWith(${source}, { nullable: true, default: () => null })`
+      }
       const defaultSource =
         options.default !== undefined && options.default !== null
           ? `() => ${JSON.stringify(options.default)} as const`
