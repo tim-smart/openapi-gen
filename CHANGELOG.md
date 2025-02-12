@@ -1,5 +1,11 @@
 # @tim-smart/openapi-gen
 
+## 0.3.5
+
+### Patch Changes
+
+- [#15](https://github.com/tim-smart/openapi-gen/pull/15) [`e075d18`](https://github.com/tim-smart/openapi-gen/commit/e075d18932c1c50b9e0f0fa3e2ff980ac4255e2c) Thanks [@IMax153](https://github.com/IMax153)! - Add support for null defaults on properties not marked as nullable
+
 ## 0.3.4
 
 ### Patch Changes
