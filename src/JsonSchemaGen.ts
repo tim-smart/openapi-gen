@@ -97,12 +97,6 @@ const make = Effect.gen(function* () {
     const isEnum = enums.has(name)
     return toSource(S, schema, name, isClass || isEnum).pipe(
       Option.map((source) => {
-        if (name === "Model") {
-          console.error({
-            name,
-            source,
-          })
-        }
         const isObject = "properties" in schema
         if (!isObject || !isClass) {
           return `export class ${name} extends ${source} {}`
