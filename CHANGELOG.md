@@ -1,5 +1,11 @@
 # @tim-smart/openapi-gen
 
+## 0.3.4
+
+### Patch Changes
+
+- [#12](https://github.com/tim-smart/openapi-gen/pull/12) [`d6a2732`](https://github.com/tim-smart/openapi-gen/commit/d6a273207f718ee5408b302ccc0878112e104a73) Thanks [@tim-smart](https://github.com/tim-smart)! - more enums
+
 ## 0.3.3
 
 ### Patch Changes
