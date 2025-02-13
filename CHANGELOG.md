@@ -1,5 +1,11 @@
 # @tim-smart/openapi-gen
 
+## 0.3.6
+
+### Patch Changes
+
+- [#17](https://github.com/tim-smart/openapi-gen/pull/17) [`a4bd2e3`](https://github.com/tim-smart/openapi-gen/commit/a4bd2e3b477758c6c820ca7a5ac21ace616d9aec) Thanks [@IMax153](https://github.com/IMax153)! - Fix the type of nullable properties to be wrapped by `Schema.NullOr`
+
 ## 0.3.5
 
 ### Patch Changes
