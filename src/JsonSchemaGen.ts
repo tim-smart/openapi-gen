@@ -280,7 +280,7 @@ const make = Effect.gen(function* () {
       // Handle the special case where the `default` value of the property
       // was set to `null`, but the property was not properly marked as `nullable`
       if (options.isNullable && options.default === null) {
-        return `${S}.optionalWith(${S}.NullOr(${source}), { nullable: true, default: () => null })`
+        return `${S}.optionalWith(${S}.NullOr(${source}), { default: () => null })`
       }
       const defaultSource =
         options.default !== undefined && options.default !== null
