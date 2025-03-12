@@ -1,5 +1,11 @@
 # @tim-smart/openapi-gen
 
+## 0.3.8
+
+### Patch Changes
+
+- [`e9cb350`](https://github.com/tim-smart/openapi-gen/commit/e9cb3505db2632d196466ee9fa09e13013d99a62) Thanks [@tim-smart](https://github.com/tim-smart)! - fix allOf support
+
 ## 0.3.7
 
 ### Patch Changes
