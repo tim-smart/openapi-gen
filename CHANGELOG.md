@@ -1,5 +1,11 @@
 # @tim-smart/openapi-gen
 
+## 0.3.9
+
+### Patch Changes
+
+- [`ff50728`](https://github.com/tim-smart/openapi-gen/commit/ff507282870ddc36fcdfbaed68425037636c5a59) Thanks [@tim-smart](https://github.com/tim-smart)! - support const json schema
+
 ## 0.3.8
 
 ### Patch Changes
