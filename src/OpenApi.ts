@@ -314,7 +314,6 @@ const operationToImpl = (operation: ParsedOperation) => {
       ${decodes.join(",\n      ")}
     }))))`)
 
-  pipeline.push(`Effect.scoped`)
   return (
     `"${operation.id}": (${params}) => ` +
     `HttpClientRequest.make("${operation.method.toUpperCase()}")(${operation.pathTemplate})` +

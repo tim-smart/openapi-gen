@@ -24,19 +24,19 @@
   "author": "Tim Smart <hello@timsmart.co>",
   "license": "MIT",
   "devDependencies": {
-    "@changesets/changelog-github": "^0.5.0",
-    "@changesets/cli": "^2.27.9",
-    "@effect/cli": "^0.48.9",
-    "@effect/platform": "^0.69.9",
-    "@effect/platform-node": "^0.64.10",
-    "@types/node": "^22.8.2",
-    "effect": "^3.10.4",
-    "prettier": "^3.3.3",
-    "tsup": "^8.3.5",
-    "tsx": "^4.19.2",
-    "typescript": "^5.6.3"
+    "@changesets/changelog-github": "^0.5.1",
+    "@changesets/cli": "^2.28.1",
+    "@effect/cli": "^0.58.1",
+    "@effect/platform": "^0.79.1",
+    "@effect/platform-node": "^0.75.1",
+    "@types/node": "^22.13.10",
+    "effect": "^3.13.10",
+    "prettier": "^3.5.3",
+    "tsup": "^8.4.0",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2"
   },
   "dependencies": {
-    "yaml": "^2.6.0"
+    "yaml": "^2.7.0"
   }
 }
