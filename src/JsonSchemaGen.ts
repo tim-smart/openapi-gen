@@ -51,15 +51,21 @@ const make = Effect.gen(function* () {
           addRefs(schema.items, undefined)
         }
       } else if ("allOf" in schema) {
-        const resolved = resolveAllOf(schema, {
-          ...root,
-          ...context,
-        })
-        if (childName !== undefined) {
-          addRefs(resolved, childName + "Enum", asStruct)
-          store.set(childName, resolved)
+        if (schema.allOf.length === 1) {
+          const resolved = { ...schema, ...schema.allOf[0] }
+          delete resolved.allOf
+          addRefs(resolved, childName, asStruct)
         } else {
-          addRefs(resolved, undefined, asStruct)
+          const resolved = resolveAllOf(schema, {
+            ...root,
+            ...context,
+          })
+          if (childName !== undefined) {
+            addRefs(resolved, childName + "Enum", asStruct)
+            store.set(childName, resolved)
+          } else {
+            addRefs(resolved, undefined, asStruct)
+          }
         }
       } else if ("anyOf" in schema) {
         schema.anyOf.forEach((s) =>
