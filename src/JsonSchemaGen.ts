@@ -97,13 +97,37 @@ const make = Effect.gen(function* () {
     const isEnum = enums.has(name)
     return toSource(S, schema, name, isClass || isEnum).pipe(
       Option.map((source) => {
-        const isObject = "properties" in schema
+        const isObject = "properties" in schema || "allOf" in schema
         if (!isObject || !isClass) {
           return `export class ${name} extends ${source} {}`
         }
         return `export class ${name} extends ${S}.Class<${name}>("${name}")(${source}) {}`
       }),
     )
+  }
+
+  const getSchema = (raw: JsonSchema.JsonSchema): JsonSchema.JsonSchema => {
+    if ("$ref" in raw) {
+      return refStore.get(raw.$ref) ?? raw
+    }
+    return raw
+  }
+
+  const flattenAllOf = (
+    schema: JsonSchema.JsonSchema,
+  ): JsonSchema.JsonSchema => {
+    if ("allOf" in schema) {
+      let out = {} as JsonSchema.JsonSchema
+      for (const member of schema.allOf) {
+        let s = getSchema(member as any)
+        if ("allOf" in s) {
+          s = flattenAllOf(s)
+        }
+        out = mergeSchemas(out, s)
+      }
+      return out
+    }
+    return getSchema(schema)
   }
 
   const toSource = (
@@ -118,8 +142,7 @@ const make = Effect.gen(function* () {
       const properties = pipe(
         Object.entries(obj.properties ?? {}),
         Arr.filterMap(([key, schema]) => {
-          const fullSchema =
-            "$ref" in schema ? refStore.get(schema.$ref)! : schema
+          const fullSchema = getSchema(schema)
           const isOptional = !required.includes(key)
           return toSource(S, schema, currentIdentifier + identifier(key)).pipe(
             Option.map(
@@ -238,21 +261,14 @@ const make = Effect.gen(function* () {
         topLevel,
       )
     } else if ("allOf" in schema) {
-      const sources = pipe(
-        (schema as any).allOf as Array<JsonSchema.JsonSchema>,
-        Arr.filterMap((_) => toSource(S, _, currentIdentifier + "Enum")),
-      )
+      const sources = (schema as any).allOf as Array<JsonSchema.JsonSchema>
       if (sources.length === 0) {
         return Option.none()
       } else if (sources.length === 1) {
-        return Option.some(sources[0])
+        return toSource(S, sources[0], currentIdentifier + "Enum", topLevel)
       }
-      const first = sources[0]
-      const modifiers: Array<string> = []
-      for (let i = 1; i < sources.length; i++) {
-        modifiers.push(sources[i])
-      }
-      return Option.some(`${first}${pipeSource(modifiers)}`)
+      const flattened = flattenAllOf(schema)
+      return toSource(S, flattened, currentIdentifier + "Enum", topLevel)
     } else if ("anyOf" in schema || "oneOf" in schema) {
       const sources = pipe(
         "anyOf" in schema
@@ -331,4 +347,25 @@ export class JsonSchemaGen extends Context.Tag("JsonSchemaGen")<
   Effect.Effect.Success<typeof make>
 >() {
   static with = Effect.provideServiceEffect(JsonSchemaGen, make)
+}
+
+function mergeSchemas(
+  self: JsonSchema.JsonSchema,
+  other: JsonSchema.JsonSchema,
+): JsonSchema.JsonSchema {
+  if ("properties" in self && "properties" in other) {
+    return {
+      ...other,
+      ...self,
+      properties: {
+        ...other.properties,
+        ...self.properties,
+      },
+      required: [...(other.required || []), ...(self.required || [])],
+    }
+  }
+  return {
+    ...self,
+    ...other,
+  } as any
 }
