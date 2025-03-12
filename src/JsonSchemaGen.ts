@@ -24,27 +24,21 @@ const make = Effect.gen(function* () {
       asStruct = true,
     ) {
       if ("$ref" in schema) {
-        if (!schema.$ref.startsWith("#")) {
-          return
-        }
-        const path = schema.$ref.slice(2).split("/")
-        const name = identifier(path[path.length - 1])
-        if (store.has(name)) {
-          return
-        }
-        let current: JsonSchema.JsonSchema = {
+        const resolved = resolveRef(schema, {
           ...root,
           ...context,
+        })
+        if (!resolved) {
+          return
         }
-        for (const key of path) {
-          if (!current) return
-          current = (current as any)[key] as JsonSchema.JsonSchema
+        if (store.has(resolved.name)) {
+          return
         }
-        refStore.set(schema.$ref, current)
-        addRefs(current, name)
-        store.set(name, current)
+        refStore.set(schema.$ref, resolved.schema)
+        addRefs(resolved.schema, resolved.name)
+        store.set(resolved.name, resolved.schema)
         if (!asStruct) {
-          classes.add(name)
+          classes.add(resolved.name)
         }
       } else if ("properties" in schema) {
         Object.entries(schema.properties).forEach(([name, s]) =>
@@ -57,9 +51,16 @@ const make = Effect.gen(function* () {
           addRefs(schema.items, undefined)
         }
       } else if ("allOf" in schema) {
-        ;(schema as any).allOf.forEach((s: any) =>
-          addRefs(s, childName ? childName + "Enum" : undefined),
-        )
+        const resolved = resolveAllOf(schema, {
+          ...root,
+          ...context,
+        })
+        if (childName !== undefined) {
+          addRefs(resolved, childName + "Enum", asStruct)
+          store.set(childName, resolved)
+        } else {
+          addRefs(resolved, undefined, asStruct)
+        }
       } else if ("anyOf" in schema) {
         schema.anyOf.forEach((s) =>
           addRefs(s as any, childName ? childName + "Enum" : undefined),
@@ -97,7 +98,7 @@ const make = Effect.gen(function* () {
     const isEnum = enums.has(name)
     return toSource(S, schema, name, isClass || isEnum).pipe(
       Option.map((source) => {
-        const isObject = "properties" in schema || "allOf" in schema
+        const isObject = "properties" in schema
         if (!isObject || !isClass) {
           return `export class ${name} extends ${source} {}`
         }
@@ -261,6 +262,9 @@ const make = Effect.gen(function* () {
         topLevel,
       )
     } else if ("allOf" in schema) {
+      if (store.has(currentIdentifier)) {
+        return Option.some(currentIdentifier)
+      }
       const sources = (schema as any).allOf as Array<JsonSchema.JsonSchema>
       if (sources.length === 0) {
         return Option.none()
@@ -365,9 +369,70 @@ function mergeSchemas(
       },
       required: [...(other.required || []), ...(self.required || [])],
     }
+  } else if ("anyOf" in self && "anyOf" in other) {
+    return {
+      ...other,
+      ...self,
+      anyOf: [...self.anyOf, ...other.anyOf] as any,
+    }
   }
   return {
     ...self,
     ...other,
   } as any
+}
+
+function resolveAllOf(
+  schema: JsonSchema.JsonSchema,
+  context: JsonSchema.JsonSchema,
+  resolveRefs = true,
+): JsonSchema.JsonSchema {
+  if ("$ref" in schema) {
+    const resolved = resolveRef(schema, context, resolveRefs)
+    if (!resolved) {
+      return schema
+    }
+    return resolved.schema
+  } else if ("allOf" in schema) {
+    if (schema.allOf.length <= 1) {
+      let out = { ...schema }
+      delete out.allOf
+      if (schema.allOf.length === 0) {
+        return out
+      }
+      Object.assign(out, schema.allOf[0])
+      return resolveAllOf(out, context, resolveRefs)
+    }
+    let out = {} as JsonSchema.JsonSchema
+    for (const member of schema.allOf) {
+      out = mergeSchemas(out, resolveAllOf(member as any, context, resolveRefs))
+    }
+    return out
+  }
+  return schema
+}
+
+function resolveRef(
+  schema: JsonSchema.Ref,
+  context: JsonSchema.JsonSchema,
+  recursive = false,
+):
+  | {
+      readonly name: string
+      readonly schema: JsonSchema.JsonSchema
+    }
+  | undefined {
+  if (!schema.$ref.startsWith("#")) {
+    return
+  }
+  const path = schema.$ref.slice(2).split("/")
+  const name = identifier(path[path.length - 1])
+
+  let current = context
+  for (const key of path) {
+    if (!current) return
+    current = (current as any)[key] as JsonSchema.JsonSchema
+  }
+
+  return { name, schema: resolveAllOf(current, context, recursive) } as const
 }

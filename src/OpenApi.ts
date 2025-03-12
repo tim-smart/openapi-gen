@@ -153,6 +153,7 @@ export const make = Effect.gen(function* () {
         'import * as HttpClientError from "@effect/platform/HttpClientError"',
         'import * as HttpClientRequest from "@effect/platform/HttpClientRequest"',
         'import * as HttpClientResponse from "@effect/platform/HttpClientResponse"',
+        'import * as UrlParams from "@effect/platform/UrlParams"',
         'import * as Effect from "effect/Effect"',
         'import type { ParseError } from "effect/ParseResult"',
         'import * as S from "effect/Schema"',
@@ -274,7 +275,7 @@ const operationToImpl = (operation: ParsedOperation) => {
     const varName = operation.payload ? "options.params" : "options"
     if (operation.urlParams.length > 0) {
       const props = operation.urlParams.map(
-        (param) => `"${param}": ${varName}["${param}"]`,
+        (param) => `"${param}": ${varName}["${param}"] as UrlParams.Coercible`,
       )
       pipeline.push(`HttpClientRequest.setUrlParams({ ${props.join(", ")} })`)
     }
