@@ -1,5 +1,13 @@
 # @tim-smart/openapi-gen
 
+## 0.3.7
+
+### Patch Changes
+
+- [`209356d`](https://github.com/tim-smart/openapi-gen/commit/209356d4032db3edafc71675acf72da94221ac12) Thanks [@tim-smart](https://github.com/tim-smart)! - support xx status codes
+
+- [`161ffb3`](https://github.com/tim-smart/openapi-gen/commit/161ffb3bd9bde866a8a856aa41f5db78ddf362f5) Thanks [@tim-smart](https://github.com/tim-smart)! - remove Effect.scoped from generated methods
+
 ## 0.3.6
 
 ### Patch Changes
