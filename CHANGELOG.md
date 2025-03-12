@@ -1,5 +1,11 @@
 # @tim-smart/openapi-gen
 
+## 0.3.10
+
+### Patch Changes
+
+- [`4de7841`](https://github.com/tim-smart/openapi-gen/commit/4de78417ec79a2b9afde67a683e5481e64763465) Thanks [@tim-smart](https://github.com/tim-smart)! - import allOf flattening
+
 ## 0.3.9
 
 ### Patch Changes
