@@ -1,5 +1,11 @@
 # @tim-smart/openapi-gen
 
+## 0.3.11
+
+### Patch Changes
+
+- [`d87473a`](https://github.com/tim-smart/openapi-gen/commit/d87473afe265feb753ed813ee5ce368db06c5072) Thanks [@tim-smart](https://github.com/tim-smart)! - fix allOf with single item
+
 ## 0.3.10
 
 ### Patch Changes
