@@ -31,8 +31,8 @@ interface ParsedOperation {
   readonly payload?: string
   readonly pathIds: ReadonlyArray<string>
   readonly pathTemplate: string
-  readonly successSchemas: ReadonlyMap<number, string>
-  readonly errorSchemas: ReadonlyMap<number, string>
+  readonly successSchemas: ReadonlyMap<string, string>
+  readonly errorSchemas: ReadonlyMap<string, string>
 }
 
 export const make = Effect.gen(function* () {
@@ -131,11 +131,12 @@ export const make = Effect.gen(function* () {
                     context,
                     true,
                   )
-                  const statusNumber = Number(status)
-                  if (statusNumber < 400) {
-                    op.successSchemas.set(statusNumber, schemaName)
+                  const statusLower = status.toLowerCase()
+                  const statusMajorNumber = Number(status[0])
+                  if (statusMajorNumber < 4) {
+                    op.successSchemas.set(statusLower, schemaName)
                   } else {
-                    op.errorSchemas.set(statusNumber, schemaName)
+                    op.errorSchemas.set(statusLower, schemaName)
                   }
                 }
               },
