@@ -279,6 +279,8 @@ const make = Effect.gen(function* () {
       if (sources.length === 0) return Option.none()
       else if (sources.length === 1) return Option.some(sources[0])
       return Option.some(`${S}.Union(${sources.join(", ")})`)
+    } else if ("const" in schema) {
+      return Option.some(`${S}.Literal(${JSON.stringify(schema.const)})`)
     }
     return Option.none()
   }
