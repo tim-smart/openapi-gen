@@ -219,14 +219,14 @@ const operationToMethod = (operation: ParsedOperation) => {
   let success = "void"
   if (operation.successSchemas.size > 0) {
     success = Array.from(operation.successSchemas.values())
-      .map((schema) => `typeof ${schema}.Type`)
+      .map((schema) => schema)
       .join(" | ")
   }
   const errors = ["HttpClientError.HttpClientError", "ParseError"]
   if (operation.errorSchemas.size > 0) {
     errors.push(
       ...Array.from(operation.errorSchemas.values()).map(
-        (schema) => `typeof ${schema}.Type`,
+        (schema) => schema,
       ),
     )
   }

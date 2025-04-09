@@ -106,7 +106,7 @@ const make = Effect.gen(function* () {
       Option.map((source) => {
         const isObject = "properties" in schema
         if (!isObject || !isClass) {
-          return `export class ${name} extends ${source} {}`
+          return `export const ${name} = ${source}\nexport type ${name} = typeof ${name}.Type`
         }
         return `export class ${name} extends ${S}.Class<${name}>("${name}")(${source}) {}`
       }),
