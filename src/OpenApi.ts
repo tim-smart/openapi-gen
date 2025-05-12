@@ -9,6 +9,7 @@ import { JsonSchemaGen } from "./JsonSchemaGen.js"
 import type * as JsonSchema from "@effect/platform/OpenApiJsonSchema"
 import type { DeepMutable } from "effect/Types"
 import { camelize, identifier } from "./Utils.js"
+import { convertObj } from "swagger2openapi"
 
 const methodNames: ReadonlyArray<OpenAPISpecMethodName> = [
   "get",
@@ -36,135 +37,156 @@ interface ParsedOperation {
 }
 
 export const make = Effect.gen(function* () {
-  const generate = (spec: OpenAPISpec) =>
-    Effect.gen(function* () {
-      const gen = yield* JsonSchemaGen
-      const components = spec.components?.schemas
-        ? { schemas: spec.components.schemas }
-        : { schemas: {} }
-      const context = { components }
-      const operations: Array<ParsedOperation> = []
+  const convert = Effect.fn("OpenApi.convert")((v2Spec: unknown) =>
+    Effect.async<unknown>((resume) => {
+      convertObj(v2Spec as any, {}, (err, result) => {
+        if (err) {
+          resume(Effect.die(err))
+        } else {
+          resume(Effect.succeed(result.openapi))
+        }
+      })
+    }),
+  )
 
-      const handlePath = (path: string, methods: OpenAPISpecPathItem) =>
-        methodNames
-          .filter((method) => !!methods[method])
-          .forEach((method) => {
-            const { ids: pathIds, path: pathTemplate } = processPath(path)
-            const operation = methods[method]!
-            const op: DeepMutable<ParsedOperation> = {
-              id: camelize(operation.operationId!),
-              method,
-              pathIds,
-              pathTemplate,
-              urlParams: [],
-              headers: [],
-              cookies: [],
-              successSchemas: new Map(),
-              errorSchemas: new Map(),
+  const generate = Effect.fnUntraced(function* (spec: OpenAPISpec) {
+    const gen = yield* JsonSchemaGen
+    const components = spec.components
+      ? { ...spec.components }
+      : { schemas: {} }
+    const context = { components }
+    const operations: Array<ParsedOperation> = []
+
+    function resolveRef(ref: string) {
+      const parts = ref.split("/").slice(1)
+      let current: any = spec
+      for (const part of parts) {
+        current = current[part]
+      }
+      return current
+    }
+
+    const handlePath = (path: string, methods: OpenAPISpecPathItem) =>
+      methodNames
+        .filter((method) => !!methods[method] && !!methods[method]!.operationId)
+        .forEach((method) => {
+          const { ids: pathIds, path: pathTemplate } = processPath(path)
+          const operation = methods[method]!
+          const op: DeepMutable<ParsedOperation> = {
+            id: camelize(operation.operationId!),
+            method,
+            pathIds,
+            pathTemplate,
+            urlParams: [],
+            headers: [],
+            cookies: [],
+            successSchemas: new Map(),
+            errorSchemas: new Map(),
+          }
+          const schemaId = identifier(operation.operationId!)
+          const validParameters =
+            operation.parameters?.filter(
+              (_) => _.in !== "path" && _.in !== "cookie",
+            ) ?? []
+          if (validParameters.length > 0) {
+            const schema: JsonSchema.Object = {
+              type: "object",
+              properties: {},
+              required: [],
             }
-            const schemaId = identifier(operation.operationId!)
-            const validParameters =
-              operation.parameters?.filter(
-                (_) => _.in !== "path" && _.in !== "cookie",
-              ) ?? []
-            if (validParameters.length > 0) {
-              const schema: JsonSchema.Object = {
-                type: "object",
-                properties: {},
-                required: [],
+            validParameters.forEach((parameter) => {
+              if ("$ref" in parameter) {
+                parameter = resolveRef(parameter.$ref as string)
               }
-              validParameters.forEach((parameter) => {
-                if (parameter.in === "path") {
-                  return
-                }
-                const paramSchema = parameter.schema
-                const added: Array<string> = []
-                if ("properties" in paramSchema) {
-                  const required = paramSchema.required ?? []
-                  Object.entries(paramSchema.properties).forEach(
-                    ([name, propSchema]) => {
-                      const adjustedName = `${parameter.name}[${name}]`
-                      schema.properties[adjustedName] = propSchema
-                      if (required.includes(name)) {
-                        schema.required.push(adjustedName)
-                      }
-                      added.push(adjustedName)
-                    },
-                  )
-                } else {
-                  schema.properties[parameter.name] = parameter.schema
-                  parameter.required && schema.required.push(parameter.name)
-                  added.push(parameter.name)
-                }
-                if (parameter.in === "query") {
-                  op.urlParams.push(...added)
-                } else if (parameter.in === "header") {
-                  op.headers.push(...added)
-                } else if (parameter.in === "cookie") {
-                  op.cookies.push(...added)
-                }
-              })
-              op.params = gen.addSchema(
-                `${schemaId}Params`,
-                schema,
-                context,
-                true,
-              )
-            }
-            if (operation.requestBody?.content?.["application/json"]?.schema) {
-              op.payload = gen.addSchema(
-                `${schemaId}Request`,
-                operation.requestBody.content["application/json"].schema,
-                context,
-              )
-            } else if (
-              operation.requestBody?.content?.["multipart/form-data"]
-            ) {
-              op.payload = "FormData"
-            }
-            Object.entries(operation.responses ?? {}).forEach(
-              ([status, response]) => {
-                if (response.content?.["application/json"]?.schema) {
-                  const schemaName = gen.addSchema(
-                    `${schemaId}${status}`,
-                    response.content["application/json"].schema,
-                    context,
-                    true,
-                  )
-                  const statusLower = status.toLowerCase()
-                  const statusMajorNumber = Number(status[0])
-                  if (statusMajorNumber < 4) {
-                    op.successSchemas.set(statusLower, schemaName)
-                  } else {
-                    op.errorSchemas.set(statusLower, schemaName)
-                  }
-                }
-              },
+              if (parameter.in === "path") {
+                return
+              }
+              const paramSchema = parameter.schema
+              const added: Array<string> = []
+              if ("properties" in paramSchema) {
+                const required = paramSchema.required ?? []
+                Object.entries(paramSchema.properties).forEach(
+                  ([name, propSchema]) => {
+                    const adjustedName = `${parameter.name}[${name}]`
+                    schema.properties[adjustedName] = propSchema
+                    if (required.includes(name)) {
+                      schema.required.push(adjustedName)
+                    }
+                    added.push(adjustedName)
+                  },
+                )
+              } else {
+                schema.properties[parameter.name] = parameter.schema
+                parameter.required && schema.required.push(parameter.name)
+                added.push(parameter.name)
+              }
+              if (parameter.in === "query") {
+                op.urlParams.push(...added)
+              } else if (parameter.in === "header") {
+                op.headers.push(...added)
+              } else if (parameter.in === "cookie") {
+                op.cookies.push(...added)
+              }
+            })
+            op.params = gen.addSchema(
+              `${schemaId}Params`,
+              schema,
+              context,
+              true,
             )
-            operations.push(op)
-          })
+          }
+          if (operation.requestBody?.content?.["application/json"]?.schema) {
+            op.payload = gen.addSchema(
+              `${schemaId}Request`,
+              operation.requestBody.content["application/json"].schema,
+              context,
+            )
+          } else if (operation.requestBody?.content?.["multipart/form-data"]) {
+            op.payload = "FormData"
+          }
+          Object.entries(operation.responses ?? {}).forEach(
+            ([status, response]) => {
+              if (response.content?.["application/json"]?.schema) {
+                const schemaName = gen.addSchema(
+                  `${schemaId}${status}`,
+                  response.content["application/json"].schema,
+                  context,
+                  true,
+                )
+                const statusLower = status.toLowerCase()
+                const statusMajorNumber = Number(status[0])
+                if (statusMajorNumber < 4) {
+                  op.successSchemas.set(statusLower, schemaName)
+                } else {
+                  op.errorSchemas.set(statusLower, schemaName)
+                }
+              }
+            },
+          )
+          operations.push(op)
+        })
 
-      Object.entries(spec.paths).forEach(([path, methods]) =>
-        handlePath(path, methods),
-      )
+    Object.entries(spec.paths).forEach(([path, methods]) =>
+      handlePath(path, methods),
+    )
 
-      const imports = [
-        'import type * as HttpClient from "@effect/platform/HttpClient"',
-        'import * as HttpClientError from "@effect/platform/HttpClientError"',
-        'import * as HttpClientRequest from "@effect/platform/HttpClientRequest"',
-        'import * as HttpClientResponse from "@effect/platform/HttpClientResponse"',
-        'import * as UrlParams from "@effect/platform/UrlParams"',
-        'import * as Effect from "effect/Effect"',
-        'import type { ParseError } from "effect/ParseResult"',
-        'import * as S from "effect/Schema"',
-      ].join("\n")
-      const schemas = yield* gen.generate("S")
-      const clientInterface = operationsToInterface("Client", operations)
-      const clientImpl = operationsToImpl("Client", operations)
-      return `${imports}\n\n${schemas}\n\n${clientImpl}\n\n${clientInterface}`
-    }).pipe(JsonSchemaGen.with)
+    const imports = [
+      'import type * as HttpClient from "@effect/platform/HttpClient"',
+      'import * as HttpClientError from "@effect/platform/HttpClientError"',
+      'import * as HttpClientRequest from "@effect/platform/HttpClientRequest"',
+      'import * as HttpClientResponse from "@effect/platform/HttpClientResponse"',
+      'import * as UrlParams from "@effect/platform/UrlParams"',
+      'import * as Effect from "effect/Effect"',
+      'import type { ParseError } from "effect/ParseResult"',
+      'import * as S from "effect/Schema"',
+    ].join("\n")
+    const schemas = yield* gen.generate("S")
+    const clientInterface = operationsToInterface("Client", operations)
+    const clientImpl = operationsToImpl("Client", operations)
+    return `${imports}\n\n${schemas}\n\n${clientImpl}\n\n${clientInterface}`
+  }, JsonSchemaGen.with)
 
-  return { generate } as const
+  return { convert, generate } as const
 })
 
 export class OpenApi extends Effect.Tag("OpenApi")<

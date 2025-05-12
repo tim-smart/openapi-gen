@@ -12,9 +12,21 @@ const spec = Options.fileParse("spec").pipe(
   Options.withDescription("The OpenAPI spec file to generate the client from"),
 )
 
-const root = Command.make("openapigen", { spec }).pipe(
-  Command.withHandler(({ spec }) =>
-    OpenApi.generate(spec as any).pipe(Effect.flatMap(Console.log)),
+const convert = Options.boolean("convert").pipe(
+  Options.withAlias("c"),
+  Options.withDescription("Convert from OpenAPI 2 to OpenAPI 3 first"),
+)
+
+const root = Command.make("openapigen", { spec, convert }).pipe(
+  Command.withHandler(
+    Effect.fnUntraced(function* ({ spec, convert }) {
+      if (convert) {
+        spec = yield* OpenApi.convert(spec as any)
+      }
+      return yield* OpenApi.generate(spec as any).pipe(
+        Effect.flatMap(Console.log),
+      )
+    }),
   ),
 )
 
