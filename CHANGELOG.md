@@ -1,5 +1,11 @@
 # @tim-smart/openapi-gen
 
+## 0.3.12
+
+### Patch Changes
+
+- [`41dd7b7`](https://github.com/tim-smart/openapi-gen/commit/41dd7b7fea6742bfc4c052e71510a780a863646b) Thanks [@tim-smart](https://github.com/tim-smart)! - add convert option for v2 specs
+
 ## 0.3.11
 
 ### Patch Changes
