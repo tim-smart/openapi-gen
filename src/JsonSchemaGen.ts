@@ -126,11 +126,19 @@ const make = Effect.gen(function* () {
   ): Option.Option<string> => {
     const isClass = classes.has(name)
     const isEnum = enums.has(name)
-    return toSource(importName, schema, name, isClass || isEnum).pipe(
+    const topLevel = transformer.supportsTopLevel({
+      importName,
+      schema,
+      name,
+      isClass,
+      isEnum,
+    })
+    return toSource(importName, schema, name, topLevel).pipe(
       Option.map((source) =>
         transformer.onTopLevel({
           importName,
           schema,
+          description: Option.fromNullable(schema.description),
           name,
           source,
           isClass,
@@ -188,6 +196,7 @@ const make = Effect.gen(function* () {
             Option.map((source) =>
               transformer.onProperty({
                 importName,
+                description: Option.fromNullable(schema.description),
                 key,
                 source,
                 isOptional,
@@ -258,17 +267,26 @@ const make = Effect.gen(function* () {
         topLevel,
       )
     } else if ("anyOf" in schema || "oneOf" in schema) {
-      const sources = pipe(
+      const items = pipe(
         "anyOf" in schema
           ? (schema.anyOf as Array<JsonSchema.JsonSchema>)
           : (schema.oneOf as Array<JsonSchema.JsonSchema>),
         Arr.filterMap((_) =>
-          toSource(importName, _, currentIdentifier + "Enum"),
+          toSource(importName, _, currentIdentifier + "Enum").pipe(
+            Option.map(
+              (source) =>
+                ({
+                  description: Option.fromNullable(_.description),
+                  title: Option.fromNullable(_.title),
+                  source,
+                }) as const,
+            ),
+          ),
         ),
       )
-      if (sources.length === 0) return Option.none()
-      else if (sources.length === 1) return Option.some(sources[0])
-      return Option.some(transformer.onUnion({ importName, sources }))
+      if (items.length === 0) return Option.none()
+      else if (items.length === 1) return Option.some(items[0].source)
+      return Option.some(transformer.onUnion({ importName, items, topLevel }))
     } else if ("const" in schema) {
       return Option.some(
         transformer.onEnum({
@@ -374,17 +392,27 @@ export { with_ as with }
 export class JsonSchemaTransformer extends Context.Tag("JsonSchemaTransformer")<
   JsonSchemaTransformer,
   {
-    onTopLevel: (options: {
+    supportsTopLevel(options: {
       readonly importName: string
       readonly schema: JsonSchema.JsonSchema
+      readonly name: string
+      readonly isClass: boolean
+      readonly isEnum: boolean
+    }): boolean
+
+    onTopLevel(options: {
+      readonly importName: string
+      readonly schema: JsonSchema.JsonSchema
+      readonly description: Option.Option<string>
       readonly name: string
       readonly source: string
       readonly isClass: boolean
       readonly isEnum: boolean
-    }) => string
+    }): string
 
     onProperty(options: {
       readonly importName: string
+      readonly description: Option.Option<string>
       readonly key: string
       readonly source: string
       readonly isOptional: boolean
@@ -439,7 +467,12 @@ export class JsonSchemaTransformer extends Context.Tag("JsonSchemaTransformer")<
 
     onUnion(options: {
       readonly importName: string
-      readonly sources: ReadonlyArray<string>
+      readonly topLevel: boolean
+      readonly items: ReadonlyArray<{
+        readonly description: Option.Option<string>
+        readonly title: Option.Option<string>
+        readonly source: string
+      }>
     }): string
   }
 >() {}
@@ -480,6 +513,9 @@ export const layerTransformerSchema = Layer.sync(JsonSchemaTransformer, () => {
     modifers.length === 0 ? "" : `.pipe(${modifers.join(", ")})`
 
   return JsonSchemaTransformer.of({
+    supportsTopLevel({ isClass, isEnum }) {
+      return isClass || isEnum
+    },
     onTopLevel({ importName, schema, name, source, isClass }) {
       const isObject = "properties" in schema
       if (!isObject || !isClass) {
@@ -560,8 +596,8 @@ export const layerTransformerSchema = Layer.sync(JsonSchemaTransformer, () => {
 
       return `${importName}.${nonEmpty ? "NonEmpty" : ""}Array(${item})${pipeSource(modifiers)}`
     },
-    onUnion({ importName, sources }) {
-      return `${importName}.Union(${sources.join(", ")})`
+    onUnion({ importName, items }) {
+      return `${importName}.Union(${items.map((_) => _.source).join(", ")})`
     },
   })
 })
@@ -569,14 +605,19 @@ export const layerTransformerSchema = Layer.sync(JsonSchemaTransformer, () => {
 export const layerTransformerTs = Layer.succeed(
   JsonSchemaTransformer,
   JsonSchemaTransformer.of({
-    onTopLevel({ name, source }) {
+    supportsTopLevel() {
+      return true
+    },
+    onTopLevel({ name, source, schema, description }) {
       return source[0] === "{"
-        ? `export interface ${name} ${source}`
-        : `export type ${name} = ${source}`
+        ? "oneOf" in schema
+          ? `${toComment(description)}export enum ${name} ${source}`
+          : `${toComment(description)}export interface ${name} ${source}`
+        : `${toComment(description)}export type ${name} = ${source}`
     },
     propertySeparator: ";\n  ",
-    onProperty: (options) => {
-      return `readonly "${options.key}"${options.isOptional ? "?" : ""}: ${options.source}${options.isNullable ? " | null" : ""}`
+    onProperty(options) {
+      return `${toComment(options.description)}readonly "${options.key}"${options.isOptional ? "?" : ""}: ${options.source}${options.isNullable ? " | null" : ""}`
     },
     onRef({ name }) {
       return name
@@ -605,11 +646,20 @@ export const layerTransformerTs = Layer.succeed(
     onArray({ item }) {
       return `ReadonlyArray<${item}>`
     },
-    onUnion({ sources }) {
-      return sources.join(" | ")
+    onUnion({ items, topLevel }) {
+      const useEnum = topLevel && !items.some((_) => Option.isNone(_.title))
+      if (!useEnum) {
+        return items.map((_) => _.source).join(" | ")
+      }
+      return `{\n  ${items.map(({ description, title, source }) => `${toComment(description)}${JSON.stringify(Option.getOrNull(title))} = ${source}`).join(",\n  ")}}\n`
     },
   }),
 )
+
+const toComment = Option.match({
+  onNone: () => "",
+  onSome: (description: string) => `/** ${description} */\n`,
+})
 
 function mergeSchemas(
   self: JsonSchema.JsonSchema,
