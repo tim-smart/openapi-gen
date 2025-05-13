@@ -12,18 +12,29 @@ const spec = Options.fileParse("spec").pipe(
   Options.withDescription("The OpenAPI spec file to generate the client from"),
 )
 
+const name = Options.text("name").pipe(
+  Options.withAlias("n"),
+  Options.withDescription("The name of the generated client"),
+  Options.withDefault("Client"),
+)
+
 const convert = Options.boolean("convert").pipe(
   Options.withAlias("c"),
   Options.withDescription("Convert from OpenAPI 2 to OpenAPI 3 first"),
 )
 
-const root = Command.make("openapigen", { spec, convert }).pipe(
+const typeOnly = Options.boolean("type-only").pipe(
+  Options.withAlias("t"),
+  Options.withDescription("Generate a type-only client without schemas"),
+)
+
+const root = Command.make("openapigen", { spec, convert, typeOnly, name }).pipe(
   Command.withHandler(
-    Effect.fnUntraced(function* ({ spec, convert }) {
+    Effect.fnUntraced(function* ({ spec, convert, typeOnly, name }) {
       if (convert) {
         spec = yield* OpenApi.convert(spec as any)
       }
-      return yield* OpenApi.generate(spec as any).pipe(
+      return yield* OpenApi.generate(spec as any, { name, typeOnly }).pipe(
         Effect.flatMap(Console.log),
       )
     }),

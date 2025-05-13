@@ -2,6 +2,7 @@ import * as Effect from "effect/Effect"
 import type * as JsonSchema from "@effect/platform/OpenApiJsonSchema"
 import * as Context from "effect/Context"
 import * as Option from "effect/Option"
+import * as Layer from "effect/Layer"
 import * as Arr from "effect/Array"
 import { pipe } from "effect/Function"
 import { identifier } from "./Utils"
@@ -96,20 +97,23 @@ const make = Effect.gen(function* () {
   }
 
   const topLevelSource = (
-    S: string,
+    importName: string,
     name: string,
     schema: JsonSchema.JsonSchema,
   ): Option.Option<string> => {
     const isClass = classes.has(name)
     const isEnum = enums.has(name)
-    return toSource(S, schema, name, isClass || isEnum).pipe(
-      Option.map((source) => {
-        const isObject = "properties" in schema
-        if (!isObject || !isClass) {
-          return `export class ${name} extends ${source} {}`
-        }
-        return `export class ${name} extends ${S}.Class<${name}>("${name}")(${source}) {}`
-      }),
+    return toSource(importName, schema, name, isClass || isEnum).pipe(
+      Option.map((source) =>
+        transformer.onTopLevel({
+          importName,
+          schema,
+          name,
+          source,
+          isClass,
+          isEnum,
+        }),
+      ),
     )
   }
 
@@ -137,8 +141,10 @@ const make = Effect.gen(function* () {
     return getSchema(schema)
   }
 
+  const transformer = yield* JsonSchemaTransformer
+
   const toSource = (
-    S: string,
+    importName: string,
     schema: JsonSchema.JsonSchema,
     currentIdentifier: string,
     topLevel = false,
@@ -151,56 +157,53 @@ const make = Effect.gen(function* () {
         Arr.filterMap(([key, schema]) => {
           const fullSchema = getSchema(schema)
           const isOptional = !required.includes(key)
-          return toSource(S, schema, currentIdentifier + identifier(key)).pipe(
-            Option.map(
-              applyAnnotations(S, {
+          return toSource(
+            importName,
+            schema,
+            currentIdentifier + identifier(key),
+          ).pipe(
+            Option.map((source) =>
+              transformer.onProperty({
+                importName,
+                key,
+                source,
                 isOptional,
                 isNullable:
                   ("nullable" in fullSchema && fullSchema.nullable === true) ||
                   ("default" in fullSchema && fullSchema.default === null),
-                default: fullSchema.default,
               }),
             ),
-            Option.map((source) => `"${key}": ${source}`),
           )
         }),
-        Arr.join(",\n  "),
+        Arr.join(transformer.propertySeparator),
       )
       return Option.some(
-        `${topLevel ? "" : `${S}.Struct(`}{\n  ${properties}\n}${topLevel ? "" : ")"}`,
+        transformer.onObject({ importName, properties, topLevel }),
       )
     } else if ("type" in schema && (schema.type as any) === "null") {
-      return Option.some(`${S}.Null`)
+      return Option.some(transformer.onNull({ importName }))
     } else if ("type" in schema && (schema.type as any) === "object") {
-      return Option.some(
-        `${S}.Record({ key: ${S}.String, value: ${S}.Unknown })`,
-      )
+      return Option.some(transformer.onRecord({ importName }))
     } else if ("enum" in schema) {
       if (!topLevel && enums.has(currentIdentifier)) {
-        return Option.some(currentIdentifier)
+        return Option.some(
+          transformer.onRef({ importName, name: currentIdentifier }),
+        )
       }
-      const items = schema.enum.map((_) => JSON.stringify(_)).join(", ")
-      return Option.some(`${S}.Literal(${items})`)
+      const items = schema.enum.map((_) => JSON.stringify(_))
+      return Option.some(
+        transformer.onEnum({
+          importName,
+          items,
+        }),
+      )
     } else if ("type" in schema && schema.type) {
       switch (schema.type) {
         case "string": {
-          const modifiers: Array<string> = []
-          if ("minLength" in schema) {
-            modifiers.push(`${S}.minLength(${schema.minLength})`)
-          }
-          if ("maxLength" in schema) {
-            modifiers.push(`${S}.maxLength(${schema.maxLength})`)
-          }
-          if ("pattern" in schema) {
-            modifiers.push(
-              `${S}.pattern(new RegExp(${JSON.stringify(schema.pattern)}))`,
-            )
-          }
-          return Option.some(`${S}.String${pipeSource(modifiers)}`)
+          return Option.some(transformer.onString({ importName, schema }))
         }
         case "integer":
         case "number": {
-          const modifiers: Array<string> = []
           const minimum =
             typeof schema.exclusiveMinimum === "number"
               ? schema.exclusiveMinimum
@@ -217,39 +220,37 @@ const make = Effect.gen(function* () {
             typeof schema.exclusiveMaximum === "boolean"
               ? schema.exclusiveMaximum
               : typeof schema.exclusiveMaximum === "number"
-          if (minimum !== undefined) {
-            modifiers.push(
-              `${S}.greaterThan${exclusiveMinimum ? "" : "OrEqualTo"}(${schema.minimum})`,
-            )
-          }
-          if (maximum !== undefined) {
-            modifiers.push(
-              `${S}.lessThan${exclusiveMaximum ? "" : "OrEqualTo"}(${schema.maximum})`,
-            )
-          }
           return Option.some(
-            `${S}.${schema.type === "integer" ? "Int" : "Number"}${pipeSource(modifiers)}`,
+            transformer.onNumber({
+              importName,
+              schema,
+              minimum,
+              exclusiveMinimum,
+              maximum,
+              exclusiveMaximum,
+            }),
           )
         }
         case "boolean": {
-          return Option.some(`${S}.Boolean`)
+          return Option.some(transformer.onBoolean({ importName }))
         }
         case "array": {
-          const modifiers: Array<string> = []
           const nonEmpty =
             typeof schema.minItems === "number" &&
             schema.minItems === 1 &&
             schema.maxItems === undefined
-          if ("minItems" in schema && !nonEmpty) {
-            modifiers.push(`${S}.minItems(${schema.minItems})`)
-          }
-          if ("maxItems" in schema) {
-            modifiers.push(`${S}.maxItems(${schema.maxItems})`)
-          }
-          return toSource(S, itemsSchema(schema.items), currentIdentifier).pipe(
-            Option.map(
-              (source) =>
-                `${S}.${nonEmpty ? "NonEmpty" : ""}Array(${source})${pipeSource(modifiers)}`,
+          return toSource(
+            importName,
+            itemsSchema(schema.items),
+            currentIdentifier,
+          ).pipe(
+            Option.map((item) =>
+              transformer.onArray({
+                importName,
+                schema,
+                item,
+                nonEmpty,
+              }),
             ),
           )
         }
@@ -259,42 +260,168 @@ const make = Effect.gen(function* () {
         return Option.none()
       }
       const name = identifier(schema.$ref.split("/").pop()!)
-      return Option.some(name)
+      return Option.some(transformer.onRef({ importName, name }))
     } else if ("properties" in schema) {
       return toSource(
-        S,
+        importName,
         { type: "object", ...schema } as any,
         currentIdentifier,
         topLevel,
       )
     } else if ("allOf" in schema) {
       if (store.has(currentIdentifier)) {
-        return Option.some(currentIdentifier)
+        return Option.some(
+          transformer.onRef({ importName, name: currentIdentifier }),
+        )
       }
       const sources = (schema as any).allOf as Array<JsonSchema.JsonSchema>
       if (sources.length === 0) {
         return Option.none()
       } else if (sources.length === 1) {
-        return toSource(S, sources[0], currentIdentifier + "Enum", topLevel)
+        return toSource(
+          importName,
+          sources[0],
+          currentIdentifier + "Enum",
+          topLevel,
+        )
       }
       const flattened = flattenAllOf(schema)
-      return toSource(S, flattened, currentIdentifier + "Enum", topLevel)
+      return toSource(
+        importName,
+        flattened,
+        currentIdentifier + "Enum",
+        topLevel,
+      )
     } else if ("anyOf" in schema || "oneOf" in schema) {
       const sources = pipe(
         "anyOf" in schema
           ? (schema.anyOf as Array<JsonSchema.JsonSchema>)
           : (schema.oneOf as Array<JsonSchema.JsonSchema>),
-        Arr.filterMap((_) => toSource(S, _, currentIdentifier + "Enum")),
+        Arr.filterMap((_) =>
+          toSource(importName, _, currentIdentifier + "Enum"),
+        ),
       )
       if (sources.length === 0) return Option.none()
       else if (sources.length === 1) return Option.some(sources[0])
-      return Option.some(`${S}.Union(${sources.join(", ")})`)
+      return Option.some(transformer.onUnion({ importName, sources }))
     } else if ("const" in schema) {
-      return Option.some(`${S}.Literal(${JSON.stringify(schema.const)})`)
+      return Option.some(
+        transformer.onEnum({
+          importName,
+          items: [JSON.stringify(schema.const)],
+        }),
+      )
     }
     return Option.none()
   }
 
+  const itemsSchema = (
+    schema: JsonSchema.Array["items"],
+  ): JsonSchema.JsonSchema => {
+    if (schema === undefined) {
+      return { $id: "/schemas/any" }
+    } else if (Array.isArray(schema)) {
+      return { anyOf: schema }
+    }
+    return schema
+  }
+
+  const generate = (importName: string) =>
+    Effect.sync(() =>
+      pipe(
+        store.entries(),
+        Arr.filterMap(([name, schema]) =>
+          topLevelSource(importName, name, schema),
+        ),
+        Arr.join("\n\n"),
+      ),
+    )
+
+  return { addSchema, generate } as const
+})
+
+export class JsonSchemaGen extends Context.Tag("JsonSchemaGen")<
+  JsonSchemaGen,
+  Effect.Effect.Success<typeof make>
+>() {}
+
+const with_ = Effect.provideServiceEffect(JsonSchemaGen, make)
+export { with_ as with }
+
+export class JsonSchemaTransformer extends Context.Tag("JsonSchemaTransformer")<
+  JsonSchemaTransformer,
+  {
+    onTopLevel: (options: {
+      readonly importName: string
+      readonly schema: JsonSchema.JsonSchema
+      readonly name: string
+      readonly source: string
+      readonly isClass: boolean
+      readonly isEnum: boolean
+    }) => string
+
+    onProperty(options: {
+      readonly importName: string
+      readonly key: string
+      readonly source: string
+      readonly isOptional: boolean
+      readonly isNullable: boolean
+      readonly default?: unknown
+    }): string
+
+    readonly propertySeparator: string
+
+    onRef(options: {
+      readonly importName: string
+      readonly name: string
+    }): string
+
+    onObject(options: {
+      readonly importName: string
+      readonly properties: string
+      readonly topLevel: boolean
+    }): string
+
+    onNull(options: { readonly importName: string }): string
+
+    onBoolean(options: { readonly importName: string }): string
+
+    onRecord(options: { readonly importName: string }): string
+
+    onEnum(options: {
+      readonly importName: string
+      readonly items: ReadonlyArray<string>
+    }): string
+
+    onString(options: {
+      readonly importName: string
+      readonly schema: JsonSchema.String
+    }): string
+
+    onNumber(options: {
+      readonly importName: string
+      readonly schema: JsonSchema.Number | JsonSchema.Integer
+      readonly minimum: number | undefined
+      readonly exclusiveMinimum: boolean
+      readonly maximum: number | undefined
+      readonly exclusiveMaximum: boolean
+    }): string
+
+    onArray(options: {
+      readonly importName: string
+      readonly schema: JsonSchema.Array
+      readonly item: string
+      readonly nonEmpty: boolean
+    }): string
+
+    onUnion(options: {
+      readonly importName: string
+      readonly sources: ReadonlyArray<string>
+    }): string
+  }
+>() {}
+
+export const layerTransformerSchema = Layer.sync(JsonSchemaTransformer, () => {
   const applyAnnotations =
     (
       S: string,
@@ -326,40 +453,140 @@ const make = Effect.gen(function* () {
       return newSource
     }
 
-  const itemsSchema = (
-    schema: JsonSchema.Array["items"],
-  ): JsonSchema.JsonSchema => {
-    if (schema === undefined) {
-      return { $id: "/schemas/any" }
-    } else if (Array.isArray(schema)) {
-      return { anyOf: schema }
-    }
-    return schema
-  }
-
   const pipeSource = (modifers: Array<string>) =>
     modifers.length === 0 ? "" : `.pipe(${modifers.join(", ")})`
 
-  const generate = (importName: string) =>
-    Effect.sync(() =>
-      pipe(
-        store.entries(),
-        Arr.filterMap(([name, schema]) =>
-          topLevelSource(importName, name, schema),
-        ),
-        Arr.join("\n\n"),
-      ),
-    )
+  return JsonSchemaTransformer.of({
+    onTopLevel({ importName, schema, name, source, isClass }) {
+      const isObject = "properties" in schema
+      if (!isObject || !isClass) {
+        return `export class ${name} extends ${source} {}`
+      }
+      return `export class ${name} extends ${importName}.Class<${name}>("${name}")(${source}) {}`
+    },
+    propertySeparator: ",\n  ",
+    onProperty: (options) => {
+      const source = applyAnnotations(
+        options.importName,
+        options,
+      )(options.source)
+      return `"${options.key}": ${source}`
+    },
+    onRef({ name }) {
+      return name
+    },
+    onObject({ importName, properties, topLevel }) {
+      return `${topLevel ? "" : `${importName}.Struct(`}{\n  ${properties}\n}${topLevel ? "" : ")"}`
+    },
+    onNull({ importName }) {
+      return `${importName}.Null`
+    },
+    onBoolean({ importName }) {
+      return `${importName}.Boolean`
+    },
+    onRecord({ importName }) {
+      return `${importName}.Record({ key: ${importName}.String, value: ${importName}.Unknown })`
+    },
+    onEnum({ importName, items }) {
+      return `${importName}.Literal(${items.join(", ")})`
+    },
+    onString({ importName, schema }) {
+      const modifiers: Array<string> = []
+      if ("minLength" in schema) {
+        modifiers.push(`${importName}.minLength(${schema.minLength})`)
+      }
+      if ("maxLength" in schema) {
+        modifiers.push(`${importName}.maxLength(${schema.maxLength})`)
+      }
+      if ("pattern" in schema) {
+        modifiers.push(
+          `${importName}.pattern(new RegExp(${JSON.stringify(schema.pattern)}))`,
+        )
+      }
+      return `${importName}.String${pipeSource(modifiers)}`
+    },
+    onNumber({
+      importName,
+      schema,
+      minimum,
+      exclusiveMinimum,
+      maximum,
+      exclusiveMaximum,
+    }) {
+      const modifiers: Array<string> = []
+      if (minimum !== undefined) {
+        modifiers.push(
+          `${importName}.greaterThan${exclusiveMinimum ? "" : "OrEqualTo"}(${schema.minimum})`,
+        )
+      }
+      if (maximum !== undefined) {
+        modifiers.push(
+          `${importName}.lessThan${exclusiveMaximum ? "" : "OrEqualTo"}(${schema.maximum})`,
+        )
+      }
+      return `${importName}.${schema.type === "integer" ? "Int" : "Number"}${pipeSource(modifiers)}`
+    },
+    onArray({ importName, schema, item, nonEmpty }) {
+      const modifiers: Array<string> = []
+      if ("minItems" in schema && !nonEmpty) {
+        modifiers.push(`${importName}.minItems(${schema.minItems})`)
+      }
+      if ("maxItems" in schema) {
+        modifiers.push(`${importName}.maxItems(${schema.maxItems})`)
+      }
 
-  return { addSchema, generate } as const
+      return `${importName}.${nonEmpty ? "NonEmpty" : ""}Array(${item})${pipeSource(modifiers)}`
+    },
+    onUnion({ importName, sources }) {
+      return `${importName}.Union(${sources.join(", ")})`
+    },
+  })
 })
 
-export class JsonSchemaGen extends Context.Tag("JsonSchemaGen")<
-  JsonSchemaGen,
-  Effect.Effect.Success<typeof make>
->() {
-  static with = Effect.provideServiceEffect(JsonSchemaGen, make)
-}
+export const layerTransformerTs = Layer.succeed(
+  JsonSchemaTransformer,
+  JsonSchemaTransformer.of({
+    onTopLevel({ name, source }) {
+      return source[0] === "{"
+        ? `export interface ${name} ${source}`
+        : `export type ${name} = ${source}`
+    },
+    propertySeparator: ";\n  ",
+    onProperty: (options) => {
+      return `readonly "${options.key}"${options.isOptional ? "?" : ""}: ${options.source}${options.isNullable ? " | null" : ""}`
+    },
+    onRef({ name }) {
+      return name
+    },
+    onObject({ properties }) {
+      return `{\n  ${properties}\n}`
+    },
+    onNull() {
+      return "null"
+    },
+    onBoolean() {
+      return "boolean"
+    },
+    onRecord() {
+      return "Record<string, unknown>"
+    },
+    onEnum({ items }) {
+      return items.join(" | ")
+    },
+    onString() {
+      return "string"
+    },
+    onNumber() {
+      return "number"
+    },
+    onArray({ item }) {
+      return `ReadonlyArray<${item}>`
+    },
+    onUnion({ sources }) {
+      return sources.join(" | ")
+    },
+  }),
+)
 
 function mergeSchemas(
   self: JsonSchema.JsonSchema,
