@@ -1,5 +1,11 @@
 # @tim-smart/openapi-gen
 
+## 0.3.13
+
+### Patch Changes
+
+- [#27](https://github.com/tim-smart/openapi-gen/pull/27) [`1a5d892`](https://github.com/tim-smart/openapi-gen/commit/1a5d892d1cc35a37bd8c90cdca389a85b48603e2) Thanks [@tim-smart](https://github.com/tim-smart)! - add support for type-only clients
+
 ## 0.3.12
 
 ### Patch Changes
