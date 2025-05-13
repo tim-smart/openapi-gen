@@ -1,5 +1,11 @@
 # @tim-smart/openapi-gen
 
+## 0.3.16
+
+### Patch Changes
+
+- [`f748967`](https://github.com/tim-smart/openapi-gen/commit/f7489674bc15f23cab9f7f4bfcf171faffbf17aa) Thanks [@tim-smart](https://github.com/tim-smart)! - use {} as const instead of ts enums
+
 ## 0.3.15
 
 ### Patch Changes
