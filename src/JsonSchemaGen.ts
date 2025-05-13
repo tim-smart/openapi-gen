@@ -13,17 +13,40 @@ const make = Effect.gen(function* () {
   const enums = new Set<string>()
   const refStore = new Map<string, JsonSchema.JsonSchema>()
 
+  function cleanupSchema(schema: JsonSchema.JsonSchema) {
+    if (
+      "type" in schema &&
+      Array.isArray(schema.type) &&
+      schema.type.includes("null")
+    ) {
+      schema.type = schema.type.filter((_) => _ !== "null")[0]
+      schema.nullable = true
+    }
+    if (
+      "type" in schema &&
+      "oneOf" in schema &&
+      Array.isArray(schema.oneOf) &&
+      schema.oneOf.length === 0
+    ) {
+      delete schema.oneOf
+    }
+    return schema
+  }
+
   const addSchema = (
     name: string,
     root: JsonSchema.JsonSchema,
     context?: object,
     asStruct = false,
   ): string => {
+    cleanupSchema(root)
+
     function addRefs(
       schema: JsonSchema.JsonSchema,
       childName: string | undefined,
       asStruct = true,
     ) {
+      cleanupSchema(schema)
       if ("$ref" in schema) {
         const resolved = resolveRef(schema, {
           ...root,
@@ -197,6 +220,62 @@ const make = Effect.gen(function* () {
           items,
         }),
       )
+    } else if ("$ref" in schema) {
+      if (!schema.$ref.startsWith("#")) {
+        return Option.none()
+      }
+      const name = identifier(schema.$ref.split("/").pop()!)
+      return Option.some(transformer.onRef({ importName, name }))
+    } else if ("properties" in schema) {
+      return toSource(
+        importName,
+        { type: "object", ...schema } as any,
+        currentIdentifier,
+        topLevel,
+      )
+    } else if ("allOf" in schema) {
+      if (store.has(currentIdentifier)) {
+        return Option.some(
+          transformer.onRef({ importName, name: currentIdentifier }),
+        )
+      }
+      const sources = (schema as any).allOf as Array<JsonSchema.JsonSchema>
+      if (sources.length === 0) {
+        return Option.none()
+      } else if (sources.length === 1) {
+        return toSource(
+          importName,
+          sources[0],
+          currentIdentifier + "Enum",
+          topLevel,
+        )
+      }
+      const flattened = flattenAllOf(schema)
+      return toSource(
+        importName,
+        flattened,
+        currentIdentifier + "Enum",
+        topLevel,
+      )
+    } else if ("anyOf" in schema || "oneOf" in schema) {
+      const sources = pipe(
+        "anyOf" in schema
+          ? (schema.anyOf as Array<JsonSchema.JsonSchema>)
+          : (schema.oneOf as Array<JsonSchema.JsonSchema>),
+        Arr.filterMap((_) =>
+          toSource(importName, _, currentIdentifier + "Enum"),
+        ),
+      )
+      if (sources.length === 0) return Option.none()
+      else if (sources.length === 1) return Option.some(sources[0])
+      return Option.some(transformer.onUnion({ importName, sources }))
+    } else if ("const" in schema) {
+      return Option.some(
+        transformer.onEnum({
+          importName,
+          items: [JSON.stringify(schema.const)],
+        }),
+      )
     } else if ("type" in schema && schema.type) {
       switch (schema.type) {
         case "string": {
@@ -255,62 +334,6 @@ const make = Effect.gen(function* () {
           )
         }
       }
-    } else if ("$ref" in schema) {
-      if (!schema.$ref.startsWith("#")) {
-        return Option.none()
-      }
-      const name = identifier(schema.$ref.split("/").pop()!)
-      return Option.some(transformer.onRef({ importName, name }))
-    } else if ("properties" in schema) {
-      return toSource(
-        importName,
-        { type: "object", ...schema } as any,
-        currentIdentifier,
-        topLevel,
-      )
-    } else if ("allOf" in schema) {
-      if (store.has(currentIdentifier)) {
-        return Option.some(
-          transformer.onRef({ importName, name: currentIdentifier }),
-        )
-      }
-      const sources = (schema as any).allOf as Array<JsonSchema.JsonSchema>
-      if (sources.length === 0) {
-        return Option.none()
-      } else if (sources.length === 1) {
-        return toSource(
-          importName,
-          sources[0],
-          currentIdentifier + "Enum",
-          topLevel,
-        )
-      }
-      const flattened = flattenAllOf(schema)
-      return toSource(
-        importName,
-        flattened,
-        currentIdentifier + "Enum",
-        topLevel,
-      )
-    } else if ("anyOf" in schema || "oneOf" in schema) {
-      const sources = pipe(
-        "anyOf" in schema
-          ? (schema.anyOf as Array<JsonSchema.JsonSchema>)
-          : (schema.oneOf as Array<JsonSchema.JsonSchema>),
-        Arr.filterMap((_) =>
-          toSource(importName, _, currentIdentifier + "Enum"),
-        ),
-      )
-      if (sources.length === 0) return Option.none()
-      else if (sources.length === 1) return Option.some(sources[0])
-      return Option.some(transformer.onUnion({ importName, sources }))
-    } else if ("const" in schema) {
-      return Option.some(
-        transformer.onEnum({
-          importName,
-          items: [JSON.stringify(schema.const)],
-        }),
-      )
     }
     return Option.none()
   }
