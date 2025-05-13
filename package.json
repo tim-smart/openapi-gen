@@ -1,6 +1,6 @@
 {
   "name": "@tim-smart/openapi-gen",
-  "version": "0.3.14",
+  "version": "0.3.15",
   "description": "Generate Effect http clients from OpenAPI specs",
   "packageManager": "pnpm@9.10.0",
   "publishConfig": {
