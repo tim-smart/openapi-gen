@@ -611,7 +611,8 @@ export const layerTransformerTs = Layer.succeed(
     onTopLevel({ name, source, schema, description }) {
       return source[0] === "{"
         ? "oneOf" in schema
-          ? `${toComment(description)}export enum ${name} ${source}`
+          ? `${toComment(description)}export const ${name} = ${source};
+export type ${name} = (typeof ${name})[keyof typeof ${name}];`
           : `${toComment(description)}export interface ${name} ${source}`
         : `${toComment(description)}export type ${name} = ${source}`
     },
@@ -651,7 +652,7 @@ export const layerTransformerTs = Layer.succeed(
       if (!useEnum) {
         return items.map((_) => _.source).join(" | ")
       }
-      return `{\n  ${items.map(({ description, title, source }) => `${toComment(description)}${JSON.stringify(Option.getOrNull(title))} = ${source}`).join(",\n  ")}}\n`
+      return `{\n  ${items.map(({ description, title, source }) => `${toComment(description)}${JSON.stringify(Option.getOrNull(title))}: ${source}`).join(",\n  ")}} as const\n`
     },
   }),
 )
