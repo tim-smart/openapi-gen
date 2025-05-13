@@ -224,6 +224,7 @@ export const layerTransformerSchema = Layer.sync(OpenApiTransformer, () => {
     name: string,
     operations: ReadonlyArray<ParsedOperation>,
   ) => `export interface ${name} {
+  readonly httpClient: HttpClient.HttpClient
   ${operations.map(operationToMethod).join("\n  ")}
 }`
 
@@ -293,6 +294,7 @@ export const layerTransformerSchema = Layer.sync(OpenApiTransformer, () => {
     options.transformClient ? options.transformClient(client) : Effect.succeed(client)
   const decodeError = <A, I, R>(response: HttpClientResponse.HttpClientResponse, schema: S.Schema<A, I, R>) => Effect.flatMap(HttpClientResponse.schemaBodyJson(schema)(response), Effect.fail)
   return {
+    httpClient,
     ${operations.map(operationToImpl).join(",\n  ")}
   }
 }`
@@ -381,6 +383,7 @@ export const layerTransformerTs = Layer.sync(OpenApiTransformer, () => {
     name: string,
     operations: ReadonlyArray<ParsedOperation>,
   ) => `export interface ${name} {
+  readonly httpClient: HttpClient.HttpClient
   ${operations.map((s) => operationToMethod(name, s)).join("\n  ")}
 }
 
@@ -503,6 +506,7 @@ export const ${name}Error = <Tag extends string, E>(
       )
   }
   return {
+    httpClient,
     ${operations.map(operationToImpl).join(",\n  ")}
   }
 }`
