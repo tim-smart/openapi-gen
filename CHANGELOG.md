@@ -1,5 +1,11 @@
 # @tim-smart/openapi-gen
 
+## 0.3.15
+
+### Patch Changes
+
+- [`575760b`](https://github.com/tim-smart/openapi-gen/commit/575760b9812a6cdd401c3abcc016d3ca634b314a) Thanks [@tim-smart](https://github.com/tim-smart)! - add the http client to the interface
+
 ## 0.3.14
 
 ### Patch Changes
