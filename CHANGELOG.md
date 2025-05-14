@@ -1,5 +1,11 @@
 # @tim-smart/openapi-gen
 
+## 0.3.17
+
+### Patch Changes
+
+- [`f2bb332`](https://github.com/tim-smart/openapi-gen/commit/f2bb332676635766cd77067f72bf7574fab791c8) Thanks [@tim-smart](https://github.com/tim-smart)! - use 2xx for where possible for success codes
+
 ## 0.3.16
 
 ### Patch Changes
