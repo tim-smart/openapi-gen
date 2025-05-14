@@ -618,7 +618,7 @@ export type ${name} = (typeof ${name})[keyof typeof ${name}];`
     },
     propertySeparator: ";\n  ",
     onProperty(options) {
-      return `${toComment(options.description)}readonly "${options.key}"${options.isOptional ? "?" : ""}: ${options.source}${options.isNullable ? " | null" : ""}`
+      return `${toComment(options.description)}readonly "${options.key}"${options.isOptional ? "?" : ""}: ${options.source}${options.isNullable ? " | null" : ""}${options.isOptional ? " | undefined" : ""}`
     },
     onRef({ name }) {
       return name

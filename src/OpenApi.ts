@@ -27,6 +27,7 @@ interface ParsedOperation {
   readonly id: string
   readonly method: OpenAPISpecMethodName
   readonly params?: string
+  readonly paramsOptional: boolean
   readonly urlParams: ReadonlyArray<string>
   readonly headers: ReadonlyArray<string>
   readonly cookies: ReadonlyArray<string>
@@ -92,6 +93,7 @@ export const make = Effect.gen(function* () {
               cookies: [],
               successSchemas: new Map(),
               errorSchemas: new Map(),
+              paramsOptional: true,
             }
             const schemaId = identifier(operation.operationId!)
             const validParameters =
@@ -144,6 +146,8 @@ export const make = Effect.gen(function* () {
                 context,
                 true,
               )
+              op.paramsOptional =
+                !schema.required || schema.required.length === 0
             }
             if (operation.requestBody?.content?.["application/json"]?.schema) {
               op.payload = gen.addSchema(
@@ -235,9 +239,13 @@ export const layerTransformerSchema = Layer.sync(OpenApiTransformer, () => {
     }
     let options: Array<string> = []
     if (operation.params && !operation.payload) {
-      args.push(`options: typeof ${operation.params}.Encoded`)
+      args.push(
+        `options${operation.paramsOptional ? "?" : ""}: typeof ${operation.params}.Encoded${operation.paramsOptional ? " | undefined" : ""}`,
+      )
     } else if (operation.params) {
-      options.push(`readonly params: typeof ${operation.params}.Encoded`)
+      options.push(
+        `readonly params${operation.paramsOptional ? "?" : ""}: typeof ${operation.params}.Encoded${operation.paramsOptional ? " | undefined" : ""}`,
+      )
     }
     if (operation.payload) {
       const type =
@@ -310,7 +318,7 @@ export const layerTransformerSchema = Layer.sync(OpenApiTransformer, () => {
     const pipeline: Array<string> = []
 
     if (operation.params) {
-      const varName = operation.payload ? "options.params" : "options"
+      const varName = operation.payload ? "options.params?." : "options?."
       if (operation.urlParams.length > 0) {
         const props = operation.urlParams.map(
           (param) =>
@@ -406,9 +414,13 @@ export const ${name}Error = <Tag extends string, E>(
     }
     let options: Array<string> = []
     if (operation.params && !operation.payload) {
-      args.push(`options: ${operation.params}`)
+      args.push(
+        `options${operation.paramsOptional ? "?" : ""}: ${operation.params}${operation.paramsOptional ? " | undefined" : ""}`,
+      )
     } else if (operation.params) {
-      options.push(`readonly params: ${operation.params}`)
+      options.push(
+        `readonly params${operation.paramsOptional ? "?" : ""}: ${operation.params}${operation.paramsOptional ? " | undefined" : ""}`,
+      )
     }
     if (operation.payload) {
       const type =
@@ -522,7 +534,7 @@ export const ${name}Error = <Tag extends string, E>(
     const pipeline: Array<string> = []
 
     if (operation.params) {
-      const varName = operation.payload ? "options.params" : "options"
+      const varName = operation.payload ? "options.params?." : "options?."
       if (operation.urlParams.length > 0) {
         const props = operation.urlParams.map(
           (param) =>
