@@ -1,5 +1,11 @@
 # @tim-smart/openapi-gen
 
+## 0.3.18
+
+### Patch Changes
+
+- [`a424566`](https://github.com/tim-smart/openapi-gen/commit/a424566ba1054075e3b25214c42f30e9ebdf0b2f) Thanks [@tim-smart](https://github.com/tim-smart)! - add better support for optional parameters
+
 ## 0.3.17
 
 ### Patch Changes
