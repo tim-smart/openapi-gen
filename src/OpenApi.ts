@@ -552,12 +552,15 @@ export const ${name}Error = <Tag extends string, E>(
       pipeline.push("Effect.succeed")
     }
 
-    const successCodes = Array.from(operation.successSchemas.keys(), (_) =>
-      JSON.stringify(_),
-    ).join(", ")
+    const successCodesRaw = Array.from(operation.successSchemas.keys())
+    const successCodes = successCodesRaw
+      .map((_) => JSON.stringify(_))
+      .join(", ")
+    const singleSuccessCode =
+      successCodesRaw.length === 1 && successCodesRaw[0].startsWith("2")
     const errorCodes = Object.fromEntries(operation.errorSchemas.entries())
     pipeline.push(
-      `Effect.flatMap(onRequest([${successCodes}], ${JSON.stringify(errorCodes)}))`,
+      `Effect.flatMap(onRequest([${singleSuccessCode ? `"2xx"` : successCodes}], ${JSON.stringify(errorCodes)}))`,
     )
 
     return (
