@@ -1,5 +1,11 @@
 # @tim-smart/openapi-gen
 
+## 0.3.22
+
+### Patch Changes
+
+- [`8fff5d2`](https://github.com/tim-smart/openapi-gen/commit/8fff5d21c38f62d7739c332a98f3f37921686e74) Thanks [@tim-smart](https://github.com/tim-smart)! - use HttpClientRequest.bodyUnsafeJson
+
 ## 0.3.21
 
 ### Patch Changes
