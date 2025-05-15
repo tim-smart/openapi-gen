@@ -287,20 +287,49 @@ export const layerTransformerSchema = Layer.sync(OpenApiTransformer, () => {
     readonly transformClient?: ((client: HttpClient.HttpClient) => Effect.Effect<HttpClient.HttpClient>) | undefined
   } = {}
 ): ${name} => {
-  const unexpectedStatus = (request: HttpClientRequest.HttpClientRequest, response: HttpClientResponse.HttpClientResponse) =>
+  const unexpectedStatus = (response: HttpClientResponse.HttpClientResponse) =>
     Effect.flatMap(
       Effect.orElseSucceed(response.text, () => "Unexpected status code"),
       (description) =>
-        Effect.fail(new HttpClientError.ResponseError({
-          request,
-          response,
-          reason: "StatusCode",
-          description
-        }))
+        Effect.fail(
+          new HttpClientError.ResponseError({
+            request: response.request,
+            response,
+            reason: "StatusCode",
+            description,
+          }),
+        ),
     )
-  const applyClientTransform = (client: HttpClient.HttpClient): Effect.Effect<HttpClient.HttpClient> => 
-    options.transformClient ? options.transformClient(client) : Effect.succeed(client)
-  const decodeError = <A, I, R>(response: HttpClientResponse.HttpClientResponse, schema: S.Schema<A, I, R>) => Effect.flatMap(HttpClientResponse.schemaBodyJson(schema)(response), Effect.fail)
+  const withResponse: <A, E, R>(
+    f: (
+      response: HttpClientResponse.HttpClientResponse,
+    ) => Effect.Effect<A, E, R>,
+  ) => (
+    request: HttpClientRequest.HttpClientRequest,
+  ) => Effect.Effect<A, E | HttpClientError.HttpClientError, R> =
+    options.transformClient
+      ? (f) => (request) =>
+          Effect.flatMap(
+            Effect.flatMap(options.transformClient!(httpClient), (client) =>
+              client.execute(request),
+            ),
+            f,
+          )
+      : (f) => (request) => Effect.flatMap(httpClient.execute(request), f)
+  const jsonBody =
+    (body: unknown) => (request: HttpClientRequest.HttpClientRequest) =>
+      Effect.orDie(HttpClientRequest.bodyJson(request, body))
+  const decodeSuccess =
+    <A, I, R>(schema: S.Schema<A, I, R>) =>
+    (response: HttpClientResponse.HttpClientResponse) =>
+      HttpClientResponse.schemaBodyJson(schema)(response)
+  const decodeError =
+    <A, I, R>(schema: S.Schema<A, I, R>) =>
+    (response: HttpClientResponse.HttpClientResponse) =>
+      Effect.flatMap(
+        HttpClientResponse.schemaBodyJson(schema)(response),
+        Effect.fail,
+      )
   return {
     httpClient,
     ${operations.map(operationToImpl).join(",\n  ")}
@@ -316,6 +345,7 @@ export const layerTransformerSchema = Layer.sync(OpenApiTransformer, () => {
     const params = `${args.join(", ")}`
 
     const pipeline: Array<string> = []
+    let effectfulRequest = false
 
     if (operation.params) {
       const varName = operation.payload ? "options.params?." : "options?."
@@ -335,16 +365,10 @@ export const layerTransformerSchema = Layer.sync(OpenApiTransformer, () => {
 
     const payloadVarName = operation.params ? "options.payload" : "options"
     if (operation.payload === "FormData") {
-      pipeline.push(
-        `HttpClientRequest.bodyFormData(${payloadVarName})`,
-        "Effect.succeed",
-      )
+      pipeline.push(`HttpClientRequest.bodyFormData(${payloadVarName})`)
     } else if (operation.payload) {
-      pipeline.push(
-        `(req) => Effect.orDie(HttpClientRequest.bodyJson(req, ${payloadVarName}))`,
-      )
-    } else {
-      pipeline.push("Effect.succeed")
+      effectfulRequest = true
+      pipeline.push(`jsonBody(${payloadVarName})`)
     }
 
     const decodes: Array<string> = []
@@ -352,18 +376,17 @@ export const layerTransformerSchema = Layer.sync(OpenApiTransformer, () => {
     operation.successSchemas.forEach((schema, status) => {
       const statusCode =
         singleSuccessCode && status.startsWith("2") ? "2xx" : status
-      decodes.push(
-        `"${statusCode}": r => HttpClientResponse.schemaBodyJson(${schema})(r)`,
-      )
+      decodes.push(`"${statusCode}": decodeSuccess(${schema})`)
     })
     operation.errorSchemas.forEach((schema, status) => {
-      decodes.push(`"${status}": r => decodeError(r, ${schema})`)
+      decodes.push(`"${status}": decodeError(${schema})`)
     })
-    decodes.push(`orElse: (response) => unexpectedStatus(request, response)`)
+    decodes.push(`orElse: unexpectedStatus`)
 
-    pipeline.push(`Effect.flatMap(request => Effect.flatMap(applyClientTransform(httpClient), (httpClient) => Effect.flatMap(httpClient.execute(request), HttpClientResponse.matchStatus({
+    const execute = `withResponse(HttpClientResponse.matchStatus({
       ${decodes.join(",\n      ")}
-    }))))`)
+    }))`
+    pipeline.push(effectfulRequest ? `Effect.flatMap(${execute})` : execute)
 
     return (
       `"${operation.id}": (${params}) => ` +
@@ -472,12 +495,23 @@ export const ${name}Error = <Tag extends string, E>(
           }),
         ),
     )
-  const applyClientTransform = (
-    client: HttpClient.HttpClient,
-  ): Effect.Effect<HttpClient.HttpClient> =>
-    options.transformClient
-      ? options.transformClient(client)
-      : Effect.succeed(client)
+  const withResponse: <A, E>(
+    f: (response: HttpClientResponse.HttpClientResponse) => Effect.Effect<A, E>,
+  ) => (
+    request: HttpClientRequest.HttpClientRequest,
+  ) => Effect.Effect<any, any> = options.transformClient
+    ? (f) => (request) =>
+        Effect.flatMap(
+          Effect.flatMap(options.transformClient!(httpClient), (client) =>
+            client.execute(request),
+          ),
+          f,
+        )
+    : (f) => (request) => Effect.flatMap(httpClient.execute(request), f)
+  const jsonBody =
+    (body: unknown) =>
+    (request: HttpClientRequest.HttpClientRequest) =>
+      Effect.orDie(HttpClientRequest.bodyJson(request, body))
   const decodeSuccess = <A>(response: HttpClientResponse.HttpClientResponse) =>
     response.json as Effect.Effect<A, HttpClientError.ResponseError>
   const decodeVoid = (_response: HttpClientResponse.HttpClientResponse) =>
@@ -496,27 +530,21 @@ export const ${name}Error = <Tag extends string, E>(
       )
   const onRequest = (
     successCodes: ReadonlyArray<string>,
-    errorCodes: Record<string, string>,
+    errorCodes?: Record<string, string>,
   ) => {
     const cases: any = { orElse: unexpectedStatus }
     for (const code of successCodes) {
       cases[code] = decodeSuccess
     }
-    for (const [code, tag] of Object.entries(errorCodes)) {
-      cases[code] = decodeError(tag)
+    if (errorCodes) {
+      for (const [code, tag] of Object.entries(errorCodes)) {
+        cases[code] = decodeError(tag)
+      }
     }
     if (successCodes.length === 0) {
       cases["2xx"] = decodeVoid
     }
-    return (
-      request: HttpClientRequest.HttpClientRequest,
-    ): Effect.Effect<any, any> =>
-      Effect.flatMap(applyClientTransform(httpClient), (httpClient) =>
-        Effect.flatMap(
-          httpClient.execute(request),
-          HttpClientResponse.matchStatus(cases) as any,
-        ),
-      )
+    return withResponse(HttpClientResponse.matchStatus(cases) as any)
   }
   return {
     httpClient,
@@ -533,6 +561,7 @@ export const ${name}Error = <Tag extends string, E>(
     const params = `${args.join(", ")}`
 
     const pipeline: Array<string> = []
+    let effectfulRequest = false
 
     if (operation.params) {
       const varName = operation.payload ? "options.params?." : "options?."
@@ -552,16 +581,10 @@ export const ${name}Error = <Tag extends string, E>(
 
     const payloadVarName = operation.params ? "options.payload" : "options"
     if (operation.payload === "FormData") {
-      pipeline.push(
-        `HttpClientRequest.bodyFormData(${payloadVarName})`,
-        "Effect.succeed",
-      )
+      pipeline.push(`HttpClientRequest.bodyFormData(${payloadVarName})`)
     } else if (operation.payload) {
-      pipeline.push(
-        `(req) => Effect.orDie(HttpClientRequest.bodyJson(req, ${payloadVarName}))`,
-      )
-    } else {
-      pipeline.push("Effect.succeed")
+      effectfulRequest = true
+      pipeline.push(`jsonBody(${payloadVarName})`)
     }
 
     const successCodesRaw = Array.from(operation.successSchemas.keys())
@@ -570,10 +593,11 @@ export const ${name}Error = <Tag extends string, E>(
       .join(", ")
     const singleSuccessCode =
       successCodesRaw.length === 1 && successCodesRaw[0].startsWith("2")
-    const errorCodes = Object.fromEntries(operation.errorSchemas.entries())
-    pipeline.push(
-      `Effect.flatMap(onRequest([${singleSuccessCode ? `"2xx"` : successCodes}], ${JSON.stringify(errorCodes)}))`,
-    )
+    const errorCodes =
+      operation.errorSchemas.size > 0 &&
+      Object.fromEntries(operation.errorSchemas.entries())
+    const execute = `onRequest([${singleSuccessCode ? `"2xx"` : successCodes}]${errorCodes ? `, ${JSON.stringify(errorCodes)}` : ""})`
+    pipeline.push(effectfulRequest ? `Effect.flatMap(${execute})` : execute)
 
     return (
       `"${operation.id}": (${params}) => ` +
