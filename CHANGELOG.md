@@ -1,5 +1,11 @@
 # @tim-smart/openapi-gen
 
+## 0.3.19
+
+### Patch Changes
+
+- [`0d41a8d`](https://github.com/tim-smart/openapi-gen/commit/0d41a8dda42f8662548dec52a883606fb5a87cfd) Thanks [@tim-smart](https://github.com/tim-smart)! - cast UrlParams to any
+
 ## 0.3.18
 
 ### Patch Changes
