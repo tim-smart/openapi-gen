@@ -321,8 +321,7 @@ export const layerTransformerSchema = Layer.sync(OpenApiTransformer, () => {
       const varName = operation.payload ? "options.params?." : "options?."
       if (operation.urlParams.length > 0) {
         const props = operation.urlParams.map(
-          (param) =>
-            `"${param}": ${varName}["${param}"] as UrlParams.Coercible`,
+          (param) => `"${param}": ${varName}["${param}"] as any`,
         )
         pipeline.push(`HttpClientRequest.setUrlParams({ ${props.join(", ")} })`)
       }
@@ -537,8 +536,7 @@ export const ${name}Error = <Tag extends string, E>(
       const varName = operation.payload ? "options.params?." : "options?."
       if (operation.urlParams.length > 0) {
         const props = operation.urlParams.map(
-          (param) =>
-            `"${param}": ${varName}["${param}"] as UrlParams.Coercible`,
+          (param) => `"${param}": ${varName}["${param}"] as any`,
         )
         pipeline.push(`HttpClientRequest.setUrlParams({ ${props.join(", ")} })`)
       }
