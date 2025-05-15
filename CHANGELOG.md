@@ -1,5 +1,11 @@
 # @tim-smart/openapi-gen
 
+## 0.3.20
+
+### Patch Changes
+
+- [`0d38da7`](https://github.com/tim-smart/openapi-gen/commit/0d38da7d5197374a454a7403f7d429db4bebbb83) Thanks [@tim-smart](https://github.com/tim-smart)! - use 2xx where possible for schema variant
+
 ## 0.3.19
 
 ### Patch Changes
