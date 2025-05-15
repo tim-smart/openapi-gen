@@ -348,9 +348,12 @@ export const layerTransformerSchema = Layer.sync(OpenApiTransformer, () => {
     }
 
     const decodes: Array<string> = []
+    const singleSuccessCode = operation.successSchemas.size === 1
     operation.successSchemas.forEach((schema, status) => {
+      const statusCode =
+        singleSuccessCode && status.startsWith("2") ? "2xx" : status
       decodes.push(
-        `"${status}": r => HttpClientResponse.schemaBodyJson(${schema})(r)`,
+        `"${statusCode}": r => HttpClientResponse.schemaBodyJson(${schema})(r)`,
       )
     })
     operation.errorSchemas.forEach((schema, status) => {
@@ -375,7 +378,6 @@ export const layerTransformerSchema = Layer.sync(OpenApiTransformer, () => {
       'import * as HttpClientError from "@effect/platform/HttpClientError"',
       'import * as HttpClientRequest from "@effect/platform/HttpClientRequest"',
       'import * as HttpClientResponse from "@effect/platform/HttpClientResponse"',
-      'import * as UrlParams from "@effect/platform/UrlParams"',
       'import * as Effect from "effect/Effect"',
       'import type { ParseError } from "effect/ParseResult"',
       'import * as S from "effect/Schema"',
@@ -586,7 +588,6 @@ export const ${name}Error = <Tag extends string, E>(
       'import * as HttpClientError from "@effect/platform/HttpClientError"',
       'import * as HttpClientRequest from "@effect/platform/HttpClientRequest"',
       'import * as HttpClientResponse from "@effect/platform/HttpClientResponse"',
-      'import * as UrlParams from "@effect/platform/UrlParams"',
       'import * as Data from "effect/Data"',
       'import * as Effect from "effect/Effect"',
     ].join("\n"),
