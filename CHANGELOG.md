@@ -1,5 +1,11 @@
 # @tim-smart/openapi-gen
 
+## 0.3.26
+
+### Patch Changes
+
+- [`9a34757`](https://github.com/tim-smart/openapi-gen/commit/9a34757d48348c95b64be2247ffd733df01d92fd) Thanks [@tim-smart](https://github.com/tim-smart)! - ignore non-numeric error statuses
+
 ## 0.3.25
 
 ### Patch Changes
