@@ -182,7 +182,9 @@ export const make = Effect.gen(function* () {
                   )
                   const statusLower = status.toLowerCase()
                   const statusMajorNumber = Number(status[0])
-                  if (statusMajorNumber < 4) {
+                  if (isNaN(statusMajorNumber)) {
+                    return
+                  } else if (statusMajorNumber < 4) {
                     op.successSchemas.set(statusLower, schemaName)
                   } else {
                     op.errorSchemas.set(statusLower, schemaName)
