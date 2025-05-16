@@ -236,10 +236,12 @@ export const layerTransformerSchema = Layer.sync(OpenApiTransformer, () => {
     operations: ReadonlyArray<ParsedOperation>,
   ) => `export interface ${name} {
   readonly httpClient: HttpClient.HttpClient
-  ${operations.map(operationToMethod).join("\n  ")}
-}`
+  ${operations.map((op) => operationToMethod(name, op)).join("\n  ")}
+}
 
-  const operationToMethod = (operation: ParsedOperation) => {
+${clientErrorSource(name)}`
+
+  const operationToMethod = (name: string, operation: ParsedOperation) => {
     const args: Array<string> = []
     if (operation.pathIds.length > 0) {
       args.push(...operation.pathIds.map((id) => `${id}: string`))
@@ -275,7 +277,7 @@ export const layerTransformerSchema = Layer.sync(OpenApiTransformer, () => {
     if (operation.errorSchemas.size > 0) {
       errors.push(
         ...Array.from(operation.errorSchemas.values()).map(
-          (schema) => `typeof ${schema}.Type`,
+          (schema) => `${name}Error<"${schema}", typeof ${schema}.Type>`,
         ),
       )
     }
@@ -291,45 +293,17 @@ export const layerTransformerSchema = Layer.sync(OpenApiTransformer, () => {
     readonly transformClient?: ((client: HttpClient.HttpClient) => Effect.Effect<HttpClient.HttpClient>) | undefined
   } = {}
 ): ${name} => {
-  const unexpectedStatus = (response: HttpClientResponse.HttpClientResponse) =>
-    Effect.flatMap(
-      Effect.orElseSucceed(response.json, () => "Unexpected status code"),
-      (description) =>
-        Effect.fail(
-          new HttpClientError.ResponseError({
-            request: response.request,
-            response,
-            reason: "StatusCode",
-            description: typeof description === "string" ? description : JSON.stringify(description),
-          }),
-        ),
-    )
-  const withResponse: <A, E, R>(
-    f: (
-      response: HttpClientResponse.HttpClientResponse,
-    ) => Effect.Effect<A, E, R>,
-  ) => (
-    request: HttpClientRequest.HttpClientRequest,
-  ) => Effect.Effect<A, E | HttpClientError.HttpClientError, R> =
-    options.transformClient
-      ? (f) => (request) =>
-          Effect.flatMap(
-            Effect.flatMap(options.transformClient!(httpClient), (client) =>
-              client.execute(request),
-            ),
-            f,
-          )
-      : (f) => (request) => Effect.flatMap(httpClient.execute(request), f)
+  ${commonSource}
   const decodeSuccess =
     <A, I, R>(schema: S.Schema<A, I, R>) =>
     (response: HttpClientResponse.HttpClientResponse) =>
       HttpClientResponse.schemaBodyJson(schema)(response)
   const decodeError =
-    <A, I, R>(schema: S.Schema<A, I, R>) =>
+    <const Tag extends string, A, I, R>(tag: Tag, schema: S.Schema<A, I, R>) =>
     (response: HttpClientResponse.HttpClientResponse) =>
       Effect.flatMap(
         HttpClientResponse.schemaBodyJson(schema)(response),
-        Effect.fail,
+        (cause) => Effect.fail(${name}Error(tag, cause, response)),
       )
   return {
     httpClient,
@@ -380,7 +354,7 @@ export const layerTransformerSchema = Layer.sync(OpenApiTransformer, () => {
       decodes.push(`"${statusCode}": decodeSuccess(${schema})`)
     })
     operation.errorSchemas.forEach((schema, status) => {
-      decodes.push(`"${status}": decodeError(${schema})`)
+      decodes.push(`"${status}": decodeError("${schema}", ${schema})`)
     })
     decodes.push(`orElse: unexpectedStatus`)
 
@@ -401,6 +375,7 @@ export const layerTransformerSchema = Layer.sync(OpenApiTransformer, () => {
       'import * as HttpClientError from "@effect/platform/HttpClientError"',
       'import * as HttpClientRequest from "@effect/platform/HttpClientRequest"',
       'import * as HttpClientResponse from "@effect/platform/HttpClientResponse"',
+      'import * as Data from "effect/Data"',
       'import * as Effect from "effect/Effect"',
       'import type { ParseError } from "effect/ParseResult"',
       'import * as S from "effect/Schema"',
@@ -419,17 +394,7 @@ export const layerTransformerTs = Layer.sync(OpenApiTransformer, () => {
   ${operations.map((s) => operationToMethod(name, s)).join("\n  ")}
 }
 
-export interface ${name}Error<Tag extends string, E> {
-  readonly _tag: Tag
-  readonly cause: E
-}
-
-class ${name}ErrorImpl extends Data.Error<{ _tag: string; cause: any }> {}
-
-export const ${name}Error = <Tag extends string, E>(
-  tag: Tag,
-  cause: E,
-): ${name}Error<Tag, E> => new ${name}ErrorImpl({ _tag: tag, cause }) as any`
+${clientErrorSource(name)}`
 
   const operationToMethod = (name: string, operation: ParsedOperation) => {
     const args: Array<string> = []
@@ -479,32 +444,7 @@ export const ${name}Error = <Tag extends string, E>(
     readonly transformClient?: ((client: HttpClient.HttpClient) => Effect.Effect<HttpClient.HttpClient>) | undefined
   } = {}
 ): ${name} => {
-  const unexpectedStatus = (response: HttpClientResponse.HttpClientResponse) =>
-    Effect.flatMap(
-      Effect.orElseSucceed(response.json, () => "Unexpected status code"),
-      (description) =>
-        Effect.fail(
-          new HttpClientError.ResponseError({
-            request: response.request,
-            response,
-            reason: "StatusCode",
-            description: typeof description === "string" ? description : JSON.stringify(description),
-          }),
-        ),
-    )
-  const withResponse: <A, E>(
-    f: (response: HttpClientResponse.HttpClientResponse) => Effect.Effect<A, E>,
-  ) => (
-    request: HttpClientRequest.HttpClientRequest,
-  ) => Effect.Effect<any, any> = options.transformClient
-    ? (f) => (request) =>
-        Effect.flatMap(
-          Effect.flatMap(options.transformClient!(httpClient), (client) =>
-            client.execute(request),
-          ),
-          f,
-        )
-    : (f) => (request) => Effect.flatMap(httpClient.execute(request), f)
+  ${commonSource}
   const decodeSuccess = <A>(response: HttpClientResponse.HttpClientResponse) =>
     response.json as Effect.Effect<A, HttpClientError.ResponseError>
   const decodeVoid = (_response: HttpClientResponse.HttpClientResponse) =>
@@ -519,7 +459,7 @@ export const ${name}Error = <Tag extends string, E>(
     > =>
       Effect.flatMap(
         response.json as Effect.Effect<E, HttpClientError.ResponseError>,
-        (cause) => Effect.fail(${name}Error(tag, cause)),
+        (cause) => Effect.fail(${name}Error(tag, cause, response)),
       )
   const onRequest = (
     successCodes: ReadonlyArray<string>,
@@ -623,3 +563,58 @@ const processPath = (path: string) => {
   })
   return { path: "`" + path + "`", ids } as const
 }
+
+const commonSource = `const unexpectedStatus = (response: HttpClientResponse.HttpClientResponse) =>
+    Effect.flatMap(
+      Effect.orElseSucceed(response.json, () => "Unexpected status code"),
+      (description) =>
+        Effect.fail(
+          new HttpClientError.ResponseError({
+            request: response.request,
+            response,
+            reason: "StatusCode",
+            description: typeof description === "string" ? description : JSON.stringify(description),
+          }),
+        ),
+    )
+  const withResponse: <A, E>(
+    f: (response: HttpClientResponse.HttpClientResponse) => Effect.Effect<A, E>,
+  ) => (
+    request: HttpClientRequest.HttpClientRequest,
+  ) => Effect.Effect<any, any> = options.transformClient
+    ? (f) => (request) =>
+        Effect.flatMap(
+          Effect.flatMap(options.transformClient!(httpClient), (client) =>
+            client.execute(request),
+          ),
+          f,
+        )
+    : (f) => (request) => Effect.flatMap(httpClient.execute(request), f)`
+
+const clientErrorSource = (
+  name: string,
+) => `export interface ${name}Error<Tag extends string, E> {
+  readonly _tag: Tag
+  readonly request: HttpClientRequest.HttpClientRequest
+  readonly response: HttpClientResponse.HttpClientResponse
+  readonly cause: E
+}
+
+class ${name}ErrorImpl extends Data.Error<{
+  _tag: string
+  cause: any
+  request: HttpClientRequest.HttpClientRequest
+  response: HttpClientResponse.HttpClientResponse
+}> {}
+
+export const ${name}Error = <Tag extends string, E>(
+  tag: Tag,
+  cause: E,
+  response: HttpClientResponse.HttpClientResponse,
+): ${name}Error<Tag, E> =>
+  new ${name}ErrorImpl({
+    _tag: tag,
+    cause,
+    response,
+    request: response.request,
+  }) as any`
