@@ -5,6 +5,7 @@ import * as Layer from "effect/Layer"
 import * as NodeContext from "@effect/platform-node/NodeContext"
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime"
 import * as Command from "@effect/cli/Command"
+import * as CliConfig from "@effect/cli/CliConfig"
 import { OpenApi } from "./OpenApi.js"
 
 const spec = Options.fileParse("spec").pipe(
@@ -46,6 +47,12 @@ const run = Command.run(root, {
   version: "0.0.0",
 })
 
-const Env = Layer.mergeAll(NodeContext.layer, OpenApi.Live)
+const Env = Layer.mergeAll(
+  NodeContext.layer,
+  OpenApi.Live,
+  CliConfig.layer({
+    showBuiltIns: false,
+  }),
+)
 
 run(process.argv).pipe(Effect.provide(Env), NodeRuntime.runMain)

@@ -550,6 +550,12 @@ export const layerTransformerSchema = Layer.sync(JsonSchemaTransformer, () => {
       return `${importName}.Literal(${items.join(", ")})`
     },
     onString({ importName, schema }) {
+      if (
+        schema.format === "binary" ||
+        (schema as any).contentEncoding === "binary"
+      ) {
+        return `${importName}.instanceOf(globalThis.Blob)`
+      }
       const modifiers: Array<string> = []
       if ("minLength" in schema) {
         modifiers.push(`${importName}.minLength(${schema.minLength})`)
@@ -638,7 +644,13 @@ export type ${name} = (typeof ${name})[keyof typeof ${name}];`
     onEnum({ items }) {
       return items.join(" | ")
     },
-    onString() {
+    onString({ schema }) {
+      if (
+        schema.format === "binary" ||
+        (schema as any).contentEncoding === "binary"
+      ) {
+        return `Blob`
+      }
       return "string"
     },
     onNumber() {

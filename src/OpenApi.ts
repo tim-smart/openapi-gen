@@ -32,6 +32,7 @@ interface ParsedOperation {
   readonly headers: ReadonlyArray<string>
   readonly cookies: ReadonlyArray<string>
   readonly payload?: string
+  readonly payloadFormData: boolean
   readonly pathIds: ReadonlyArray<string>
   readonly pathTemplate: string
   readonly successSchemas: ReadonlyMap<string, string>
@@ -91,6 +92,7 @@ export const make = Effect.gen(function* () {
               urlParams: [],
               headers: [],
               cookies: [],
+              payloadFormData: false,
               successSchemas: new Map(),
               errorSchemas: new Map(),
               paramsOptional: true,
@@ -158,7 +160,12 @@ export const make = Effect.gen(function* () {
             } else if (
               operation.requestBody?.content?.["multipart/form-data"]
             ) {
-              op.payload = "FormData"
+              op.payload = gen.addSchema(
+                `${schemaId}Request`,
+                operation.requestBody.content["multipart/form-data"].schema,
+                context,
+              )
+              op.payloadFormData = true
             }
             Object.entries(operation.responses ?? {}).forEach(
               ([status, response]) => {
@@ -248,10 +255,7 @@ export const layerTransformerSchema = Layer.sync(OpenApiTransformer, () => {
       )
     }
     if (operation.payload) {
-      const type =
-        operation.payload === "FormData"
-          ? "globalThis.FormData"
-          : `typeof ${operation.payload}.Encoded`
+      const type = `typeof ${operation.payload}.Encoded`
       if (!operation.params) {
         args.push(`options: ${type}`)
       } else {
@@ -289,14 +293,14 @@ export const layerTransformerSchema = Layer.sync(OpenApiTransformer, () => {
 ): ${name} => {
   const unexpectedStatus = (response: HttpClientResponse.HttpClientResponse) =>
     Effect.flatMap(
-      Effect.orElseSucceed(response.text, () => "Unexpected status code"),
+      Effect.orElseSucceed(response.json, () => "Unexpected status code"),
       (description) =>
         Effect.fail(
           new HttpClientError.ResponseError({
             request: response.request,
             response,
             reason: "StatusCode",
-            description,
+            description: typeof description === "string" ? description : JSON.stringify(description),
           }),
         ),
     )
@@ -360,8 +364,10 @@ export const layerTransformerSchema = Layer.sync(OpenApiTransformer, () => {
     }
 
     const payloadVarName = operation.params ? "options.payload" : "options"
-    if (operation.payload === "FormData") {
-      pipeline.push(`HttpClientRequest.bodyFormData(${payloadVarName})`)
+    if (operation.payloadFormData) {
+      pipeline.push(
+        `HttpClientRequest.bodyFormDataRecord(${payloadVarName} as any)`,
+      )
     } else if (operation.payload) {
       pipeline.push(`HttpClientRequest.bodyUnsafeJson(${payloadVarName})`)
     }
@@ -441,10 +447,7 @@ export const ${name}Error = <Tag extends string, E>(
       )
     }
     if (operation.payload) {
-      const type =
-        operation.payload === "FormData"
-          ? "globalThis.FormData"
-          : operation.payload
+      const type = operation.payload
       if (!operation.params) {
         args.push(`options: ${type}`)
       } else {
@@ -478,14 +481,14 @@ export const ${name}Error = <Tag extends string, E>(
 ): ${name} => {
   const unexpectedStatus = (response: HttpClientResponse.HttpClientResponse) =>
     Effect.flatMap(
-      Effect.orElseSucceed(response.text, () => "Unexpected status code"),
+      Effect.orElseSucceed(response.json, () => "Unexpected status code"),
       (description) =>
         Effect.fail(
           new HttpClientError.ResponseError({
             request: response.request,
             response,
             reason: "StatusCode",
-            description,
+            description: typeof description === "string" ? description : JSON.stringify(description),
           }),
         ),
     )
@@ -569,8 +572,10 @@ export const ${name}Error = <Tag extends string, E>(
     }
 
     const payloadVarName = operation.params ? "options.payload" : "options"
-    if (operation.payload === "FormData") {
-      pipeline.push(`HttpClientRequest.bodyFormData(${payloadVarName})`)
+    if (operation.payloadFormData) {
+      pipeline.push(
+        `HttpClientRequest.bodyFormDataRecord(${payloadVarName} as any)`,
+      )
     } else if (operation.payload) {
       pipeline.push(`HttpClientRequest.bodyUnsafeJson(${payloadVarName})`)
     }
