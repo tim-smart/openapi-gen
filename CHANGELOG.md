@@ -1,5 +1,11 @@
 # @tim-smart/openapi-gen
 
+## 0.3.24
+
+### Patch Changes
+
+- [`0f35a2d`](https://github.com/tim-smart/openapi-gen/commit/0f35a2dc7365ddcb6f205d2922340af1714d2341) Thanks [@tim-smart](https://github.com/tim-smart)! - add custom error type to schema client
+
 ## 0.3.23
 
 ### Patch Changes
