@@ -42,13 +42,17 @@ interface ParsedOperation {
 export const make = Effect.gen(function* () {
   const convert = Effect.fn("OpenApi.convert")((v2Spec: unknown) =>
     Effect.async<unknown>((resume) => {
-      convertObj(v2Spec as any, {}, (err, result) => {
-        if (err) {
-          resume(Effect.die(err))
-        } else {
-          resume(Effect.succeed(result.openapi))
-        }
-      })
+      convertObj(
+        v2Spec as any,
+        { laxDefaults: true, laxurls: true, patch: true, warnOnly: true },
+        (err, result) => {
+          if (err) {
+            resume(Effect.die(err))
+          } else {
+            resume(Effect.succeed(result.openapi))
+          }
+        },
+      )
     }),
   )
 
