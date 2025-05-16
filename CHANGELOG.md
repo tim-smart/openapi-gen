@@ -1,5 +1,11 @@
 # @tim-smart/openapi-gen
 
+## 0.3.23
+
+### Patch Changes
+
+- [`bd6feeb`](https://github.com/tim-smart/openapi-gen/commit/bd6feeb489d72c9c65a92bc2f14971357873c9d1) Thanks [@tim-smart](https://github.com/tim-smart)! - support strongly typed form data
+
 ## 0.3.22
 
 ### Patch Changes
