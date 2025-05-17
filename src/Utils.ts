@@ -1,4 +1,6 @@
 import * as String from "effect/String"
+import * as Option from "effect/Option"
+import { flow } from "effect/Function"
 
 export const camelize = (self: string): string => {
   let str = ""
@@ -25,3 +27,16 @@ export const camelize = (self: string): string => {
 
 export const identifier = (operationId: string) =>
   String.capitalize(camelize(operationId))
+
+export const nonEmptyString = flow(
+  Option.fromNullable<string | null | undefined>,
+  Option.map(String.trim),
+  Option.filter(String.isNonEmpty),
+)
+
+export const toComment = Option.match({
+  onNone: () => "",
+  onSome: (description: string) => `/**
+* ${description.split("\n").join("\n* ")}
+*/\n`,
+})

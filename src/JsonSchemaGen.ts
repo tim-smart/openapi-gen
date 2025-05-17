@@ -4,9 +4,8 @@ import * as Context from "effect/Context"
 import * as Option from "effect/Option"
 import * as Layer from "effect/Layer"
 import * as Arr from "effect/Array"
-import * as Str from "effect/String"
-import { flow, pipe } from "effect/Function"
-import { identifier } from "./Utils"
+import { pipe } from "effect/Function"
+import { identifier, nonEmptyString, toComment } from "./Utils"
 
 const make = Effect.gen(function* () {
   const store = new Map<string, JsonSchema.JsonSchema>()
@@ -690,19 +689,6 @@ export type ${name} = (typeof ${name})[keyof typeof ${name}];`
     },
   }),
 )
-
-const nonEmptyString = flow(
-  Option.fromNullable<string | null | undefined>,
-  Option.map(Str.trim),
-  Option.filter(Str.isNonEmpty),
-)
-
-const toComment = Option.match({
-  onNone: () => "",
-  onSome: (description: string) => `/**
-* ${description.split("\n").join("\n* ")}
-*/\n`,
-})
 
 function mergeSchemas(
   self: JsonSchema.JsonSchema,

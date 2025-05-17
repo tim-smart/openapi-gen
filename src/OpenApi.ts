@@ -8,9 +8,10 @@ import * as Layer from "effect/Layer"
 import * as JsonSchemaGen from "./JsonSchemaGen.js"
 import type * as JsonSchema from "@effect/platform/OpenApiJsonSchema"
 import type { DeepMutable } from "effect/Types"
-import { camelize, identifier } from "./Utils.js"
+import { camelize, identifier, nonEmptyString, toComment } from "./Utils.js"
 import { convertObj } from "swagger2openapi"
 import * as Context from "effect/Context"
+import * as Option from "effect/Option"
 
 const methodNames: ReadonlyArray<OpenAPISpecMethodName> = [
   "get",
@@ -37,6 +38,7 @@ const httpClientMethodNames: Record<OpenAPISpecMethodName, string> = {
 interface ParsedOperation {
   readonly id: string
   readonly method: OpenAPISpecMethodName
+  readonly description: Option.Option<string>
   readonly params?: string
   readonly paramsOptional: boolean
   readonly urlParams: ReadonlyArray<string>
@@ -104,9 +106,12 @@ export const make = Effect.gen(function* () {
           .forEach((method) => {
             const { ids: pathIds, path: pathTemplate } = processPath(path)
             const operation = methods[method]!
-            const op: DeepMutable<ParsedOperation> = {
+            const op: DeepMutable<ParsedOperation> & {
+              description: Option.Option<string>
+            } = {
               id: camelize(operation.operationId!),
               method,
+              description: nonEmptyString(operation.description) as any,
               pathIds,
               pathTemplate,
               urlParams: [],
@@ -303,7 +308,7 @@ ${clientErrorSource(name)}`
         ),
       )
     }
-    return `readonly "${operation.id}": (${args.join(", ")}) => Effect.Effect<${success}, ${errors.join(" | ")}>`
+    return `${toComment(operation.description)}readonly "${operation.id}": (${args.join(", ")}) => Effect.Effect<${success}, ${errors.join(" | ")}>`
   }
 
   const operationsToImpl = (
@@ -454,7 +459,7 @@ ${clientErrorSource(name)}`
         errors.push(`${name}Error<"${schema}", ${schema}>`)
       }
     }
-    return `readonly "${operation.id}": (${args.join(", ")}) => Effect.Effect<${success}, ${errors.join(" | ")}>`
+    return `${toComment(operation.description)}readonly "${operation.id}": (${args.join(", ")}) => Effect.Effect<${success}, ${errors.join(" | ")}>`
   }
 
   const operationsToImpl = (
