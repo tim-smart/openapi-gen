@@ -4,7 +4,8 @@ import * as Context from "effect/Context"
 import * as Option from "effect/Option"
 import * as Layer from "effect/Layer"
 import * as Arr from "effect/Array"
-import { pipe } from "effect/Function"
+import * as Str from "effect/String"
+import { flow, pipe } from "effect/Function"
 import { identifier } from "./Utils"
 
 const make = Effect.gen(function* () {
@@ -138,7 +139,7 @@ const make = Effect.gen(function* () {
         transformer.onTopLevel({
           importName,
           schema,
-          description: Option.fromNullable(schema.description),
+          description: nonEmptyString(schema.description),
           name,
           source,
           isClass,
@@ -197,7 +198,7 @@ const make = Effect.gen(function* () {
             Option.map((source) =>
               transformer.onProperty({
                 importName,
-                description: Option.fromNullable(schema.description),
+                description: nonEmptyString(schema.description),
                 key,
                 source,
                 isOptional,
@@ -297,8 +298,8 @@ const make = Effect.gen(function* () {
             Option.map(
               (source) =>
                 ({
-                  description: Option.fromNullable(_.description),
-                  title: Option.fromNullable(_.title),
+                  description: nonEmptyString(_.description),
+                  title: nonEmptyString(_.title),
                   source,
                 }) as const,
             ),
@@ -688,6 +689,12 @@ export type ${name} = (typeof ${name})[keyof typeof ${name}];`
       return `{\n  ${items.map(({ description, title, source }) => `${toComment(description)}${JSON.stringify(Option.getOrNull(title))}: ${source}`).join(",\n  ")}} as const\n`
     },
   }),
+)
+
+const nonEmptyString = flow(
+  Option.fromNullable<string | null | undefined>,
+  Option.map(Str.trim),
+  Option.filter(Str.isNonEmpty),
 )
 
 const toComment = Option.match({
