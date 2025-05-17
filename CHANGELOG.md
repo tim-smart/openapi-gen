@@ -1,5 +1,11 @@
 # @tim-smart/openapi-gen
 
+## 0.4.1
+
+### Patch Changes
+
+- [`196646a`](https://github.com/tim-smart/openapi-gen/commit/196646abb1eca62711250eeacdc5dc1d4852a4b4) Thanks [@tim-smart](https://github.com/tim-smart)! - fix default values
+
 ## 0.4.0
 
 ### Minor Changes
