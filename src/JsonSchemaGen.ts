@@ -270,30 +270,25 @@ const make = Effect.gen(function* () {
         topLevel,
       )
     } else if ("anyOf" in schema || "oneOf" in schema) {
-      const itemSchemas =
+      let itemSchemas =
         "anyOf" in schema
           ? (schema.anyOf as Array<JsonSchema.JsonSchema>)
           : (schema.oneOf as Array<JsonSchema.JsonSchema>)
       let typePrimitives = 0
-      const consts = Arr.empty<unknown>()
+      const constItems = Arr.empty<JsonSchema.JsonSchema>()
       for (const item of itemSchemas) {
         if ("type" in item && (item as any).type !== "null") {
           typePrimitives++
         } else if ("const" in item) {
-          consts.push(item.const)
+          constItems.push(item)
         }
       }
       if (
         typePrimitives <= 1 &&
-        consts.length > 0 &&
-        consts.length + typePrimitives === itemSchemas.length
+        constItems.length > 0 &&
+        constItems.length + typePrimitives === itemSchemas.length
       ) {
-        return Option.some(
-          transformer.onEnum({
-            importName,
-            items: consts.map((_) => JSON.stringify(_)),
-          }),
-        )
+        itemSchemas = constItems
       }
       const items = pipe(
         itemSchemas,
@@ -542,12 +537,12 @@ export const layerTransformerSchema = Layer.sync(JsonSchemaTransformer, () => {
     supportsTopLevel({ isClass, isEnum }) {
       return isClass || isEnum
     },
-    onTopLevel({ importName, schema, name, source, isClass }) {
+    onTopLevel({ importName, schema, name, source, isClass, description }) {
       const isObject = "properties" in schema
       if (!isObject || !isClass) {
-        return `export class ${name} extends ${source} {}`
+        return `${toComment(description)}export class ${name} extends ${source} {}`
       }
-      return `export class ${name} extends ${importName}.Class<${name}>("${name}")(${source}) {}`
+      return `${toComment(description)}export class ${name} extends ${importName}.Class<${name}>("${name}")(${source}) {}`
     },
     propertySeparator: ",\n  ",
     onProperty: (options) => {
@@ -555,7 +550,7 @@ export const layerTransformerSchema = Layer.sync(JsonSchemaTransformer, () => {
         options.importName,
         options,
       )(options.source)
-      return `"${options.key}": ${source}`
+      return `${toComment(options.description)}"${options.key}": ${source}`
     },
     onRef({ name }) {
       return name
@@ -629,7 +624,7 @@ export const layerTransformerSchema = Layer.sync(JsonSchemaTransformer, () => {
       return `${importName}.${nonEmpty ? "NonEmpty" : ""}Array(${item})${pipeSource(modifiers)}`
     },
     onUnion({ importName, items }) {
-      return `${importName}.Union(${items.map((_) => _.source).join(", ")})`
+      return `${importName}.Union(${items.map((_) => `${toComment(_.description)}${_.source}`).join(",\n")})`
     },
   })
 })
@@ -697,7 +692,9 @@ export type ${name} = (typeof ${name})[keyof typeof ${name}];`
 
 const toComment = Option.match({
   onNone: () => "",
-  onSome: (description: string) => `/** ${description} */\n`,
+  onSome: (description: string) => `/**
+* ${description.split("\n").join("\n* ")}
+*/\n`,
 })
 
 function mergeSchemas(
