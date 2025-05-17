@@ -1,5 +1,15 @@
 # @tim-smart/openapi-gen
 
+## 0.4.2
+
+### Patch Changes
+
+- [`ee84a7f`](https://github.com/tim-smart/openapi-gen/commit/ee84a7f6c62dae8f4e4afe69c2ee91fc950f652b) Thanks [@tim-smart](https://github.com/tim-smart)! - include descriptions with schema variant
+
+- [#46](https://github.com/tim-smart/openapi-gen/pull/46) [`f8c8f11`](https://github.com/tim-smart/openapi-gen/commit/f8c8f11cb6c43667fe7100eb3c7beead1c25a517) Thanks [@tim-smart](https://github.com/tim-smart)! - improve nullable properties
+
+- [#46](https://github.com/tim-smart/openapi-gen/pull/46) [`f8c8f11`](https://github.com/tim-smart/openapi-gen/commit/f8c8f11cb6c43667fe7100eb3c7beead1c25a517) Thanks [@tim-smart](https://github.com/tim-smart)! - remove primitive fallbacks for literals
+
 ## 0.4.1
 
 ### Patch Changes
