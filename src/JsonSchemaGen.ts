@@ -188,9 +188,10 @@ const make = Effect.gen(function* () {
         Arr.filterMap(([key, schema]) => {
           const fullSchema = getSchema(schema)
           const isOptional = !required.includes(key)
+          const [enumNullable, filteredSchema] = filterNullable(fullSchema)
           return toSource(
             importName,
-            schema,
+            enumNullable ? filteredSchema : schema,
             currentIdentifier + identifier(key),
           ).pipe(
             Option.map((source) =>
@@ -201,6 +202,7 @@ const make = Effect.gen(function* () {
                 source,
                 isOptional,
                 isNullable:
+                  enumNullable ||
                   ("nullable" in fullSchema && fullSchema.nullable === true) ||
                   ("default" in fullSchema && fullSchema.default === null),
                 default: fullSchema.default,
@@ -268,10 +270,33 @@ const make = Effect.gen(function* () {
         topLevel,
       )
     } else if ("anyOf" in schema || "oneOf" in schema) {
-      const items = pipe(
+      const itemSchemas =
         "anyOf" in schema
           ? (schema.anyOf as Array<JsonSchema.JsonSchema>)
-          : (schema.oneOf as Array<JsonSchema.JsonSchema>),
+          : (schema.oneOf as Array<JsonSchema.JsonSchema>)
+      let typePrimitives = 0
+      const consts = Arr.empty<unknown>()
+      for (const item of itemSchemas) {
+        if ("type" in item && (item as any).type !== "null") {
+          typePrimitives++
+        } else if ("const" in item) {
+          consts.push(item.const)
+        }
+      }
+      if (
+        typePrimitives <= 1 &&
+        consts.length > 0 &&
+        consts.length + typePrimitives === itemSchemas.length
+      ) {
+        return Option.some(
+          transformer.onEnum({
+            importName,
+            items: consts.map((_) => JSON.stringify(_)),
+          }),
+        )
+      }
+      const items = pipe(
+        itemSchemas,
         Arr.filterMap((_) =>
           toSource(importName, _, currentIdentifier + "Enum").pipe(
             Option.map(
@@ -582,12 +607,12 @@ export const layerTransformerSchema = Layer.sync(JsonSchemaTransformer, () => {
       const modifiers: Array<string> = []
       if (minimum !== undefined) {
         modifiers.push(
-          `${importName}.greaterThan${exclusiveMinimum ? "" : "OrEqualTo"}(${schema.minimum})`,
+          `${importName}.greaterThan${exclusiveMinimum ? "" : "OrEqualTo"}(${minimum})`,
         )
       }
       if (maximum !== undefined) {
         modifiers.push(
-          `${importName}.lessThan${exclusiveMaximum ? "" : "OrEqualTo"}(${schema.maximum})`,
+          `${importName}.lessThan${exclusiveMaximum ? "" : "OrEqualTo"}(${maximum})`,
         )
       }
       return `${importName}.${schema.type === "integer" ? "Int" : "Number"}${pipeSource(modifiers)}`
@@ -755,4 +780,28 @@ function resolveRef(
   }
 
   return { name, schema: resolveAllOf(current, context, recursive) } as const
+}
+
+function filterNullable(schema: JsonSchema.JsonSchema) {
+  if ("oneOf" in schema || "anyOf" in schema) {
+    const items: Array<JsonSchema.JsonSchema> =
+      (schema as any).oneOf ?? (schema as any).anyOf
+    const prop = "oneOf" in schema ? "oneOf" : "anyOf"
+    let isNullable = false
+    let otherItems = Arr.empty<JsonSchema.JsonSchema>()
+    for (const item of items) {
+      if ("type" in item && (item as any).type === "null") {
+        isNullable = true
+      } else if ("const" in item && item.const === null) {
+        isNullable = true
+      } else {
+        otherItems.push(item)
+      }
+    }
+    return [
+      isNullable,
+      { ...schema, [prop]: otherItems } as JsonSchema.JsonSchema,
+    ] as const
+  }
+  return [false, schema] as const
 }
