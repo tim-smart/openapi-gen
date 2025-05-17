@@ -203,6 +203,7 @@ const make = Effect.gen(function* () {
                 isNullable:
                   ("nullable" in fullSchema && fullSchema.nullable === true) ||
                   ("default" in fullSchema && fullSchema.default === null),
+                default: fullSchema.default,
               }),
             ),
           )
