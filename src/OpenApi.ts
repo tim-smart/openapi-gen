@@ -111,7 +111,9 @@ export const make = Effect.gen(function* () {
             } = {
               id: camelize(operation.operationId!),
               method,
-              description: nonEmptyString(operation.description) as any,
+              description: nonEmptyString(operation.description).pipe(
+                Option.orElse(() => nonEmptyString(operation.summary)),
+              ) as any,
               pathIds,
               pathTemplate,
               urlParams: [],

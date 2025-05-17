@@ -29,7 +29,8 @@ export const identifier = (operationId: string) =>
   String.capitalize(camelize(operationId))
 
 export const nonEmptyString = flow(
-  Option.fromNullable<string | null | undefined>,
+  Option.fromNullable<unknown>,
+  Option.filter(String.isString),
   Option.map(String.trim),
   Option.filter(String.isNonEmpty),
 )
