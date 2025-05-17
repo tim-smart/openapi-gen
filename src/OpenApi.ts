@@ -23,6 +23,17 @@ const methodNames: ReadonlyArray<OpenAPISpecMethodName> = [
   "trace",
 ]
 
+const httpClientMethodNames: Record<OpenAPISpecMethodName, string> = {
+  get: "get",
+  put: "put",
+  post: "post",
+  delete: "del",
+  options: "options",
+  head: "head",
+  patch: "patch",
+  trace: `make("TRACE")`,
+}
+
 interface ParsedOperation {
   readonly id: string
   readonly method: OpenAPISpecMethodName
@@ -40,8 +51,10 @@ interface ParsedOperation {
 }
 
 export const make = Effect.gen(function* () {
+  const isV2 = (spec: object) => "swagger" in spec
+
   const convert = Effect.fn("OpenApi.convert")((v2Spec: unknown) =>
-    Effect.async<unknown>((resume) => {
+    Effect.async<OpenAPISpec>((resume) => {
       convertObj(
         v2Spec as any,
         { laxDefaults: true, laxurls: true, patch: true, warnOnly: true },
@@ -49,7 +62,7 @@ export const make = Effect.gen(function* () {
           if (err) {
             resume(Effect.die(err))
           } else {
-            resume(Effect.succeed(result.openapi))
+            resume(Effect.succeed(result.openapi as any))
           }
         },
       )
@@ -64,6 +77,9 @@ export const make = Effect.gen(function* () {
         readonly typeOnly: boolean
       },
     ) {
+      if (isV2(spec)) {
+        spec = yield* convert(spec)
+      }
       const gen = yield* JsonSchemaGen.JsonSchemaGen
       const components = spec.components
         ? { ...spec.components }
@@ -211,7 +227,7 @@ export const make = Effect.gen(function* () {
       ),
   )
 
-  return { convert, generate } as const
+  return { generate } as const
 })
 
 export class OpenApi extends Effect.Tag("OpenApi")<
@@ -370,7 +386,7 @@ ${clientErrorSource(name)}`
 
     return (
       `"${operation.id}": (${params}) => ` +
-      `HttpClientRequest.make("${operation.method.toUpperCase()}")(${operation.pathTemplate})` +
+      `HttpClientRequest.${httpClientMethodNames[operation.method]}(${operation.pathTemplate})` +
       `.pipe(\n    ${pipeline.join(",\n    ")}\n  )`
     )
   }
@@ -541,7 +557,7 @@ ${clientErrorSource(name)}`
 
     return (
       `"${operation.id}": (${params}) => ` +
-      `HttpClientRequest.make("${operation.method.toUpperCase()}")(${operation.pathTemplate})` +
+      `HttpClientRequest.${httpClientMethodNames[operation.method]}(${operation.pathTemplate})` +
       `.pipe(\n    ${pipeline.join(",\n    ")}\n  )`
     )
   }
