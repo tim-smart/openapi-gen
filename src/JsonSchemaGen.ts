@@ -246,12 +246,15 @@ const make = Effect.gen(function* () {
         topLevel,
       )
     } else if ("allOf" in schema) {
-      if (store.has(currentIdentifier)) {
-        return Option.some(
-          transformer.onRef({ importName, name: currentIdentifier }),
-        )
-      }
       const sources = (schema as any).allOf as Array<JsonSchema.JsonSchema>
+
+      if (sources.length === 1 && "$ref" in sources[0]) {
+        const refName = identifier((sources[0] as any).$ref.split("/").pop()!)
+        if (refName === currentIdentifier) {
+          return Option.some(transformer.onRef({ importName, name: refName }))
+        }
+      }
+
       if (sources.length === 0) {
         return Option.none()
       } else if (sources.length === 1) {
@@ -262,6 +265,7 @@ const make = Effect.gen(function* () {
           topLevel,
         )
       }
+
       const flattened = flattenAllOf(schema)
       return toSource(
         importName,
