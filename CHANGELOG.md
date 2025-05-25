@@ -1,5 +1,11 @@
 # @tim-smart/openapi-gen
 
+## 0.4.5
+
+### Patch Changes
+
+- [#51](https://github.com/tim-smart/openapi-gen/pull/51) [`34b61f1`](https://github.com/tim-smart/openapi-gen/commit/34b61f186838b348c32835367546fcf644f05fde) Thanks [@anglinb](https://github.com/anglinb)! - simplify single item enums
+
 ## 0.4.4
 
 ### Patch Changes
