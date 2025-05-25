@@ -6,6 +6,7 @@ import * as Layer from "effect/Layer"
 import * as Arr from "effect/Array"
 import { pipe } from "effect/Function"
 import { identifier, nonEmptyString, toComment } from "./Utils"
+import * as Struct from "effect/Struct"
 
 const make = Effect.gen(function* () {
   const store = new Map<string, JsonSchema.JsonSchema>()
@@ -19,17 +20,42 @@ const make = Effect.gen(function* () {
       Array.isArray(schema.type) &&
       schema.type.includes("null")
     ) {
-      schema.type = schema.type.filter((_) => _ !== "null")[0]
-      schema.nullable = true
+      schema = {
+        ...schema,
+        type: schema.type.filter((_) => _ !== "null"),
+        nullable: true,
+      } as any
     }
+
     if (
       "type" in schema &&
       "oneOf" in schema &&
       Array.isArray(schema.oneOf) &&
       schema.oneOf.length === 0
     ) {
-      delete schema.oneOf
+      schema = Struct.omit(schema, "oneOf") as any
     }
+
+    if (
+      ("allOf" in schema && schema.allOf.length === 1) ||
+      ("oneOf" in schema && (schema as any).oneOf.length === 1) ||
+      ("anyOf" in schema && schema.anyOf.length === 1)
+    ) {
+      if ("allOf" in schema) {
+        const item = schema.allOf[0]
+        schema = Struct.omit(schema, "allOf") as any
+        Object.assign(schema, item)
+      } else if ("anyOf" in schema) {
+        const item = schema.anyOf[0]
+        schema = Struct.omit(schema, "anyOf") as any
+        Object.assign(schema, item)
+      } else {
+        const item = (schema as any).oneOf[0]
+        schema = Struct.omit(schema as any, "oneOf") as any
+        Object.assign(schema, item)
+      }
+    }
+
     return schema
   }
 
@@ -39,14 +65,15 @@ const make = Effect.gen(function* () {
     context?: object,
     asStruct = false,
   ): string => {
-    cleanupSchema(root)
+    root = cleanupSchema(root)
 
     function addRefs(
       schema: JsonSchema.JsonSchema,
       childName: string | undefined,
       asStruct = true,
     ) {
-      cleanupSchema(schema)
+      schema = cleanupSchema(schema)
+      const enumSuffix = childName?.endsWith("Enum") ? "" : "Enum"
       if ("$ref" in schema) {
         const resolved = resolveRef(schema, {
           ...root,
@@ -75,37 +102,32 @@ const make = Effect.gen(function* () {
           addRefs(schema.items, undefined)
         }
       } else if ("allOf" in schema) {
-        if (schema.allOf.length === 1) {
-          const resolved = { ...schema, ...schema.allOf[0] }
-          delete resolved.allOf
-          addRefs(resolved, childName, asStruct)
+        const resolved = resolveAllOf(schema, {
+          ...root,
+          ...context,
+        })
+        if (childName !== undefined) {
+          addRefs(resolved, childName + enumSuffix, asStruct)
+          store.set(childName, resolved)
         } else {
-          const resolved = resolveAllOf(schema, {
-            ...root,
-            ...context,
-          })
-          if (childName !== undefined) {
-            addRefs(resolved, childName + "Enum", asStruct)
-            store.set(childName, resolved)
-          } else {
-            addRefs(resolved, undefined, asStruct)
-          }
+          addRefs(resolved, undefined, asStruct)
         }
       } else if ("anyOf" in schema) {
         schema.anyOf.forEach((s) =>
-          addRefs(s as any, childName ? childName + "Enum" : undefined),
+          addRefs(s as any, childName ? childName + enumSuffix : undefined),
         )
       } else if ("oneOf" in schema) {
         ;(schema as any).oneOf.forEach((s: any) =>
-          addRefs(s, childName ? childName + "Enum" : undefined),
+          addRefs(s, childName ? childName + enumSuffix : undefined),
         )
       } else if ("enum" in schema) {
-        if (childName !== undefined) {
+        if (childName !== undefined && !("const" in schema)) {
           store.set(childName, schema)
           enums.add(childName)
         }
       }
     }
+
     if ("$ref" in root) {
       addRefs(root, undefined, false)
       return identifier(root.$ref.split("/").pop()!)
@@ -180,6 +202,10 @@ const make = Effect.gen(function* () {
     currentIdentifier: string,
     topLevel = false,
   ): Option.Option<string> => {
+    schema = cleanupSchema(schema)
+    if (currentIdentifier.startsWith("FunctionCall")) {
+      console.error(schema, currentIdentifier)
+    }
     if ("properties" in schema) {
       const obj = schema as JsonSchema.Object
       const required = obj.required ?? []
@@ -219,10 +245,21 @@ const make = Effect.gen(function* () {
       return Option.some(transformer.onNull({ importName }))
     } else if ("type" in schema && (schema.type as any) === "object") {
       return Option.some(transformer.onRecord({ importName }))
+    } else if ("const" in schema) {
+      return Option.some(
+        transformer.onEnum({
+          importName,
+          items: [JSON.stringify(schema.const)],
+        }),
+      )
     } else if ("enum" in schema) {
       if (!topLevel && enums.has(currentIdentifier)) {
         return Option.some(
           transformer.onRef({ importName, name: currentIdentifier }),
+        )
+      } else if (!topLevel && enums.has(currentIdentifier + "Enum")) {
+        return Option.some(
+          transformer.onRef({ importName, name: currentIdentifier + "Enum" }),
         )
       }
       const items = schema.enum.map((_) => JSON.stringify(_))
@@ -246,26 +283,15 @@ const make = Effect.gen(function* () {
         topLevel,
       )
     } else if ("allOf" in schema) {
-      const sources = (schema as any).allOf as Array<JsonSchema.JsonSchema>
-
-      if (sources.length === 1 && "$ref" in sources[0]) {
-        const refName = identifier((sources[0] as any).$ref.split("/").pop()!)
-        if (refName === currentIdentifier) {
-          return Option.some(transformer.onRef({ importName, name: refName }))
-        }
-      }
-
-      if (sources.length === 0) {
-        return Option.none()
-      } else if (sources.length === 1) {
-        return toSource(
-          importName,
-          sources[0],
-          currentIdentifier + "Enum",
-          topLevel,
+      if (store.has(currentIdentifier)) {
+        return Option.some(
+          transformer.onRef({ importName, name: currentIdentifier }),
         )
       }
-
+      const sources = (schema as any).allOf as Array<JsonSchema.JsonSchema>
+      if (sources.length === 0) {
+        return Option.none()
+      }
       const flattened = flattenAllOf(schema)
       return toSource(
         importName,
@@ -309,16 +335,12 @@ const make = Effect.gen(function* () {
           ),
         ),
       )
-      if (items.length === 0) return Option.none()
-      else if (items.length === 1) return Option.some(items[0].source)
+      if (items.length === 0) {
+        return Option.none()
+      } else if (items.length === 1) {
+        return Option.some(items[0].source)
+      }
       return Option.some(transformer.onUnion({ importName, items, topLevel }))
-    } else if ("const" in schema) {
-      return Option.some(
-        transformer.onEnum({
-          importName,
-          items: [JSON.stringify(schema.const)],
-        }),
-      )
     } else if ("type" in schema && schema.type) {
       switch (schema.type) {
         case "string": {
