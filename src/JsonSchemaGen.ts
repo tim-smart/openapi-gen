@@ -175,7 +175,7 @@ const make = Effect.gen(function* () {
     if ("$ref" in raw) {
       return refStore.get(raw.$ref) ?? raw
     }
-    return raw
+    return cleanupSchema(raw)
   }
 
   const flattenAllOf = (
@@ -211,6 +211,7 @@ const make = Effect.gen(function* () {
         Object.entries(obj.properties ?? {}),
         Arr.filterMap(([key, schema]) => {
           const fullSchema = getSchema(schema)
+          schema = cleanupSchema(schema)
           const isOptional = !required.includes(key)
           const [enumNullable, filteredSchema] = filterNullable(fullSchema)
           return toSource(
