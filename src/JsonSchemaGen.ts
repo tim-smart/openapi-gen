@@ -20,9 +20,10 @@ const make = Effect.gen(function* () {
       Array.isArray(schema.type) &&
       schema.type.includes("null")
     ) {
+      const type = schema.type.filter((_) => _ !== "null")
       schema = {
         ...schema,
-        type: schema.type.filter((_) => _ !== "null"),
+        type: type.length === 1 ? type[0] : type,
         nullable: true,
       } as any
     }
@@ -203,9 +204,6 @@ const make = Effect.gen(function* () {
     topLevel = false,
   ): Option.Option<string> => {
     schema = cleanupSchema(schema)
-    if (currentIdentifier.startsWith("FunctionCall")) {
-      console.error(schema, currentIdentifier)
-    }
     if ("properties" in schema) {
       const obj = schema as JsonSchema.Object
       const required = obj.required ?? []
