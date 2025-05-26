@@ -1,5 +1,13 @@
 # @tim-smart/openapi-gen
 
+## 0.4.6
+
+### Patch Changes
+
+- [`8a4e8c7`](https://github.com/tim-smart/openapi-gen/commit/8a4e8c7668f44c13c892e2498872788dc147ae77) Thanks [@tim-smart](https://github.com/tim-smart)! - fix for muliple types
+
+- [`1fd0a43`](https://github.com/tim-smart/openapi-gen/commit/1fd0a436495619afdcce2523375d14ec762a0a4f) Thanks [@tim-smart](https://github.com/tim-smart)! - fix for some nullable types
+
 ## 0.4.5
 
 ### Patch Changes
