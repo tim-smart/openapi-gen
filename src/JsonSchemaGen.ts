@@ -380,8 +380,7 @@ const make = Effect.gen(function* () {
         case "array": {
           const nonEmpty =
             typeof schema.minItems === "number" &&
-            schema.minItems === 1 &&
-            schema.maxItems === undefined
+            schema.minItems > 0;
           return toSource(
             importName,
             itemsSchema(schema.items),
@@ -639,7 +638,7 @@ export const layerTransformerSchema = Layer.sync(JsonSchemaTransformer, () => {
     },
     onArray({ importName, schema, item, nonEmpty }) {
       const modifiers: Array<string> = []
-      if ("minItems" in schema && !nonEmpty) {
+      if ("minItems" in schema && nonEmpty) {
         modifiers.push(`${importName}.minItems(${schema.minItems})`)
       }
       if ("maxItems" in schema) {
