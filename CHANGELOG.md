@@ -1,5 +1,11 @@
 # @tim-smart/openapi-gen
 
+## 0.4.7
+
+### Patch Changes
+
+- [`3139a0d`](https://github.com/tim-smart/openapi-gen/commit/3139a0d5b23c68a60aa254763a6e367f08ef03bc) Thanks [@tim-smart](https://github.com/tim-smart)! - fix minItems
+
 ## 0.4.6
 
 ### Patch Changes
