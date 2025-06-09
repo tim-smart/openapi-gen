@@ -100,16 +100,17 @@ export const make = Effect.gen(function* () {
 
       const handlePath = (path: string, methods: OpenAPISpecPathItem) =>
         methodNames
-          .filter(
-            (method) => !!methods[method] && !!methods[method]!.operationId,
-          )
+          .filter((method) => !!methods[method])
           .forEach((method) => {
             const { ids: pathIds, path: pathTemplate } = processPath(path)
             const operation = methods[method]!
+            const id = operation.operationId
+              ? camelize(operation.operationId!)
+              : `${method.toUpperCase()}${path}`
             const op: DeepMutable<ParsedOperation> & {
               description: Option.Option<string>
             } = {
-              id: camelize(operation.operationId!),
+              id,
               method,
               description: nonEmptyString(operation.description).pipe(
                 Option.orElse(() => nonEmptyString(operation.summary)),
@@ -124,7 +125,7 @@ export const make = Effect.gen(function* () {
               errorSchemas: new Map(),
               paramsOptional: true,
             }
-            const schemaId = identifier(operation.operationId!)
+            const schemaId = identifier(operation.operationId ?? path)
             const validParameters =
               operation.parameters?.filter(
                 (_) => _.in !== "path" && _.in !== "cookie",

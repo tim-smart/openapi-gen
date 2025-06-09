@@ -89,9 +89,7 @@ const make = Effect.gen(function* () {
         refStore.set(schema.$ref, resolved.schema)
         addRefs(resolved.schema, resolved.name)
         store.set(resolved.name, resolved.schema)
-        if (!asStruct) {
-          classes.add(resolved.name)
-        }
+        classes.add(resolved.name)
       } else if ("properties" in schema) {
         Object.entries(schema.properties).forEach(([name, s]) =>
           addRefs(s, childName ? childName + identifier(name) : undefined),
@@ -379,8 +377,7 @@ const make = Effect.gen(function* () {
         }
         case "array": {
           const nonEmpty =
-            typeof schema.minItems === "number" &&
-            schema.minItems > 0;
+            typeof schema.minItems === "number" && schema.minItems > 0
           return toSource(
             importName,
             itemsSchema(schema.items),
