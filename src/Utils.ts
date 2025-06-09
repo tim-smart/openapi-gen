@@ -38,6 +38,6 @@ export const nonEmptyString = flow(
 export const toComment = Option.match({
   onNone: () => "",
   onSome: (description: string) => `/**
-* ${description.split("\n").join("\n* ")}
+* ${description.replace(/\*\//g, " * /").split("\n").join("\n* ")}
 */\n`,
 })
