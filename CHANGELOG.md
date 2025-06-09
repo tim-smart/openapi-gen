@@ -1,5 +1,11 @@
 # @tim-smart/openapi-gen
 
+## 0.4.8
+
+### Patch Changes
+
+- [`50c6c09`](https://github.com/tim-smart/openapi-gen/commit/50c6c090671a8d0503c8c232ea84026c81d9fdd2) Thanks [@tim-smart](https://github.com/tim-smart)! - add support for optional operationId
+
 ## 0.4.7
 
 ### Patch Changes
