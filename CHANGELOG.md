@@ -1,5 +1,11 @@
 # @tim-smart/openapi-gen
 
+## 0.4.9
+
+### Patch Changes
+
+- [`ce80d15`](https://github.com/tim-smart/openapi-gen/commit/ce80d15fcd94d2e5f550212e8426473e081b0264) Thanks [@tim-smart](https://github.com/tim-smart)! - escape closing comments in descriptions
+
 ## 0.4.8
 
 ### Patch Changes
