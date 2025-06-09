@@ -60,6 +60,7 @@ const make = Effect.gen(function* () {
     return schema
   }
 
+  const seenRefs = new Set<string>()
   const addSchema = (
     name: string,
     root: JsonSchema.JsonSchema,
@@ -76,6 +77,11 @@ const make = Effect.gen(function* () {
       schema = cleanupSchema(schema)
       const enumSuffix = childName?.endsWith("Enum") ? "" : "Enum"
       if ("$ref" in schema) {
+        if (seenRefs.has(schema.$ref)) {
+          return
+        }
+        seenRefs.add(schema.$ref)
+
         const resolved = resolveRef(schema, {
           ...root,
           ...context,
