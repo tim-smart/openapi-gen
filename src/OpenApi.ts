@@ -50,6 +50,7 @@ interface ParsedOperation {
   readonly pathTemplate: string
   readonly successSchemas: ReadonlyMap<string, string>
   readonly errorSchemas: ReadonlyMap<string, string>
+  readonly fallbackSchema: string | undefined
 }
 
 export const make = Effect.gen(function* () {
@@ -123,6 +124,7 @@ export const make = Effect.gen(function* () {
               payloadFormData: false,
               successSchemas: new Map(),
               errorSchemas: new Map(),
+              fallbackSchema: undefined,
               paramsOptional: true,
             }
             const schemaId = identifier(operation.operationId ?? path)
@@ -207,6 +209,9 @@ export const make = Effect.gen(function* () {
                   const statusLower = status.toLowerCase()
                   const statusMajorNumber = Number(status[0])
                   if (isNaN(statusMajorNumber)) {
+                    if (status === "default") {
+                      op.fallbackSchema = schemaName
+                    }
                     return
                   } else if (statusMajorNumber < 4) {
                     op.successSchemas.set(statusLower, schemaName)
@@ -258,7 +263,7 @@ export class OpenApiTransformer extends Context.Tag("OpenApiTransformer")<
       operations: ReadonlyArray<ParsedOperation>,
     ) => string
   }
->() {}
+>() { }
 
 export const layerTransformerSchema = Layer.sync(OpenApiTransformer, () => {
   const operationsToInterface = (
@@ -335,6 +340,18 @@ ${clientErrorSource(name)}`
         HttpClientResponse.schemaBodyJson(schema)(response),
         (cause) => Effect.fail(${name}Error(tag, cause, response)),
       )
+  const decodeFallback =
+    <const Tag extends string, A, I, R>(tag: Tag, schema: S.Schema<A, I, R>) =>
+    (response: HttpClientResponse.HttpClientResponse): Effect.Effect<
+      A, 
+      HttpClientError.ResponseError | ParseError | ClientError<Tag, A>, 
+      R
+    > => {
+      const decode = HttpClientResponse.schemaBodyJson(schema)(response)
+      return response.status < 400 
+        ? decode
+        : Effect.flatMap(decode, (cause) => Effect.fail(${name}Error(tag, cause, response)))
+    }
   return {
     httpClient,
     ${operations.map(operationToImpl).join(",\n  ")}
@@ -386,7 +403,12 @@ ${clientErrorSource(name)}`
     operation.errorSchemas.forEach((schema, status) => {
       decodes.push(`"${status}": decodeError("${schema}", ${schema})`)
     })
-    decodes.push(`orElse: unexpectedStatus`)
+    if (operation.fallbackSchema !== undefined) {
+      const schema = operation.fallbackSchema
+      decodes.push(`orElse: decodeFallback("${schema}", ${schema})`)
+    } else {
+      decodes.push(`orElse: unexpectedStatus`)
+    }
 
     pipeline.push(`withResponse(HttpClientResponse.matchStatus({
       ${decodes.join(",\n      ")}
