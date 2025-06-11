@@ -1,5 +1,11 @@
 # @tim-smart/openapi-gen
 
+## 0.4.10
+
+### Patch Changes
+
+- [`be6ca60`](https://github.com/tim-smart/openapi-gen/commit/be6ca60e4c49470220a997a5cac9cadc9d46cdbf) Thanks [@tim-smart](https://github.com/tim-smart)! - set default schema as 2xx if no explicit success schemas
+
 ## 0.4.9
 
 ### Patch Changes
