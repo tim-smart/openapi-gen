@@ -195,6 +195,7 @@ export const make = Effect.gen(function* () {
               )
               op.payloadFormData = true
             }
+            let defaultSchema: string | undefined
             Object.entries(operation.responses ?? {}).forEach(
               ([status, response]) => {
                 if (response.content?.["application/json"]?.schema) {
@@ -204,6 +205,10 @@ export const make = Effect.gen(function* () {
                     context,
                     true,
                   )
+                  if (status === "default") {
+                    defaultSchema = schemaName
+                    return
+                  }
                   const statusLower = status.toLowerCase()
                   const statusMajorNumber = Number(status[0])
                   if (isNaN(statusMajorNumber)) {
@@ -216,6 +221,9 @@ export const make = Effect.gen(function* () {
                 }
               },
             )
+            if (op.successSchemas.size === 0 && defaultSchema) {
+              op.successSchemas.set("2xx", defaultSchema)
+            }
             operations.push(op)
           })
 
