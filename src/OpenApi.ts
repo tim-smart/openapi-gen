@@ -198,6 +198,9 @@ export const make = Effect.gen(function* () {
             let defaultSchema: string | undefined
             Object.entries(operation.responses ?? {}).forEach(
               ([status, response]) => {
+                if ("$ref" in response) {
+                  response = resolveRef(response.$ref as string)
+                }
                 if (response.content?.["application/json"]?.schema) {
                   const schemaName = gen.addSchema(
                     `${schemaId}${status}`,
@@ -266,7 +269,7 @@ export class OpenApiTransformer extends Context.Tag("OpenApiTransformer")<
       operations: ReadonlyArray<ParsedOperation>,
     ) => string
   }
->() {}
+>() { }
 
 export const layerTransformerSchema = Layer.sync(OpenApiTransformer, () => {
   const operationsToInterface = (
