@@ -1,5 +1,11 @@
 # @tim-smart/openapi-gen
 
+## 0.4.11
+
+### Patch Changes
+
+- [#63](https://github.com/tim-smart/openapi-gen/pull/63) [`a78d3cd`](https://github.com/tim-smart/openapi-gen/commit/a78d3cd6ee811b1e2cc23b6fbff7f0520a67c50c) Thanks [@IMax153](https://github.com/IMax153)! - Support reference objects in OpenApi responses
+
 ## 0.4.10
 
 ### Patch Changes
