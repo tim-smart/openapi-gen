@@ -50,6 +50,7 @@ interface ParsedOperation {
   readonly pathTemplate: string
   readonly successSchemas: ReadonlyMap<string, string>
   readonly errorSchemas: ReadonlyMap<string, string>
+  readonly voidSchemas: ReadonlySet<string>
 }
 
 export const make = Effect.gen(function* () {
@@ -123,6 +124,7 @@ export const make = Effect.gen(function* () {
               payloadFormData: false,
               successSchemas: new Map(),
               errorSchemas: new Map(),
+              voidSchemas: new Set(),
               paramsOptional: true,
             }
             const schemaId = identifier(operation.operationId ?? path)
@@ -198,7 +200,7 @@ export const make = Effect.gen(function* () {
             let defaultSchema: string | undefined
             Object.entries(operation.responses ?? {}).forEach(
               ([status, response]) => {
-                if ("$ref" in response) {
+                while ("$ref" in response) {
                   response = resolveRef(response.$ref as string)
                 }
                 if (response.content?.["application/json"]?.schema) {
@@ -221,6 +223,9 @@ export const make = Effect.gen(function* () {
                   } else {
                     op.errorSchemas.set(statusLower, schemaName)
                   }
+                }
+                if (!response.content) {
+                  op.voidSchemas.add(status.toLowerCase())
                 }
               },
             )
@@ -396,6 +401,9 @@ ${clientErrorSource(name)}`
     })
     operation.errorSchemas.forEach((schema, status) => {
       decodes.push(`"${status}": decodeError("${schema}", ${schema})`)
+    })
+    operation.voidSchemas.forEach((status) => {
+      decodes.push(`"${status}": () => Effect.void`)
     })
     decodes.push(`orElse: unexpectedStatus`)
 
