@@ -12,7 +12,6 @@ import { camelize, identifier, nonEmptyString, toComment } from "./Utils.js"
 import { convertObj } from "swagger2openapi"
 import * as Context from "effect/Context"
 import * as Option from "effect/Option"
-import * as util from "node:util"
 
 const methodNames: ReadonlyArray<OpenAPISpecMethodName> = [
   "get",
