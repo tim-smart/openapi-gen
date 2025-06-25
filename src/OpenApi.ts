@@ -12,6 +12,7 @@ import { camelize, identifier, nonEmptyString, toComment } from "./Utils.js"
 import { convertObj } from "swagger2openapi"
 import * as Context from "effect/Context"
 import * as Option from "effect/Option"
+import * as util from "node:util"
 
 const methodNames: ReadonlyArray<OpenAPISpecMethodName> = [
   "get",
@@ -202,9 +203,13 @@ export const make = Effect.gen(function* () {
                   response = resolveRef(response.$ref as string)
                 }
                 if (response.content?.["application/json"]?.schema) {
+                  let schema = response.content["application/json"].schema
+                  while ("$ref" in schema) {
+                    schema = resolveRef(schema.$ref)
+                  }
                   const schemaName = gen.addSchema(
                     `${schemaId}${status}`,
-                    response.content["application/json"].schema,
+                    schema,
                     context,
                     true,
                   )
@@ -221,6 +226,9 @@ export const make = Effect.gen(function* () {
                   } else {
                     op.errorSchemas.set(statusLower, schemaName)
                   }
+                }
+                if (!response.content && status === "204") {
+                  op.successSchemas.set("204", "S.Void")
                 }
               },
             )
