@@ -402,7 +402,7 @@ ${clientErrorSource(name)}`
     operation.errorSchemas.forEach((schema, status) => {
       decodes.push(`"${status}": decodeError("${schema}", ${schema})`)
     })
-    operation.voidSchemas.forEach((schema, status) => {
+    operation.voidSchemas.forEach((_, status) => {
       decodes.push(`"${status}": () => Effect.void`)
     })
     decodes.push(`orElse: unexpectedStatus`)
