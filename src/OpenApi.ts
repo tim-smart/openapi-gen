@@ -50,6 +50,7 @@ interface ParsedOperation {
   readonly pathTemplate: string
   readonly successSchemas: ReadonlyMap<string, string>
   readonly errorSchemas: ReadonlyMap<string, string>
+  readonly voidSchemas: ReadonlyMap<string, string>
 }
 
 export const make = Effect.gen(function* () {
@@ -123,6 +124,7 @@ export const make = Effect.gen(function* () {
               payloadFormData: false,
               successSchemas: new Map(),
               errorSchemas: new Map(),
+              voidSchemas: new Map(),
               paramsOptional: true,
             }
             const schemaId = identifier(operation.operationId ?? path)
@@ -222,8 +224,8 @@ export const make = Effect.gen(function* () {
                     op.errorSchemas.set(statusLower, schemaName)
                   }
                 }
-                if (!response.content && status === "204") {
-                  op.successSchemas.set("204", "S.Void")
+                if (!response.content) {
+                  op.voidSchemas.set(status.toLowerCase(), "S.Void")
                 }
               },
             )
@@ -399,6 +401,9 @@ ${clientErrorSource(name)}`
     })
     operation.errorSchemas.forEach((schema, status) => {
       decodes.push(`"${status}": decodeError("${schema}", ${schema})`)
+    })
+    operation.voidSchemas.forEach((schema, status) => {
+      decodes.push(`"${status}": () => Effect.void`)
     })
     decodes.push(`orElse: unexpectedStatus`)
 
