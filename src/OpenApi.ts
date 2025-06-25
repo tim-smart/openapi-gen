@@ -198,17 +198,13 @@ export const make = Effect.gen(function* () {
             let defaultSchema: string | undefined
             Object.entries(operation.responses ?? {}).forEach(
               ([status, response]) => {
-                if ("$ref" in response) {
+                while ("$ref" in response) {
                   response = resolveRef(response.$ref as string)
                 }
                 if (response.content?.["application/json"]?.schema) {
-                  let schema = response.content["application/json"].schema
-                  while ("$ref" in schema) {
-                    schema = resolveRef(schema.$ref)
-                  }
                   const schemaName = gen.addSchema(
                     `${schemaId}${status}`,
-                    schema,
+                    response.content["application/json"].schema,
                     context,
                     true,
                   )
