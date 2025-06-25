@@ -1,5 +1,11 @@
 # @tim-smart/openapi-gen
 
+## 0.4.12
+
+### Patch Changes
+
+- [#65](https://github.com/tim-smart/openapi-gen/pull/65) [`327fbd0`](https://github.com/tim-smart/openapi-gen/commit/327fbd0c29bce731840032d0197a320bcd04d808) Thanks [@IMax153](https://github.com/IMax153)! - Support resolving nested response object references and empty responses
+
 ## 0.4.11
 
 ### Patch Changes
