@@ -274,7 +274,7 @@ export class OpenApiTransformer extends Context.Tag("OpenApiTransformer")<
       operations: ReadonlyArray<ParsedOperation>,
     ) => string
   }
->() { }
+>() {}
 
 export const layerTransformerSchema = Layer.sync(OpenApiTransformer, () => {
   const operationsToInterface = (
