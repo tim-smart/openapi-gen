@@ -7,7 +7,6 @@ import * as Arr from "effect/Array"
 import { pipe } from "effect/Function"
 import { identifier, nonEmptyString, toComment } from "./Utils"
 import * as Struct from "effect/Struct"
-import * as Data from "effect/Data"
 
 const make = Effect.gen(function* () {
   const store = new Map<string, JsonSchema.JsonSchema>()
