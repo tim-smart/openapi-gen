@@ -1,5 +1,11 @@
 # @tim-smart/openapi-gen
 
+## 0.4.13
+
+### Patch Changes
+
+- [#68](https://github.com/tim-smart/openapi-gen/pull/68) [`9a81544`](https://github.com/tim-smart/openapi-gen/commit/9a81544eca2f4aaf83201b195cd2c3cca206e549) Thanks [@harrysolovay](https://github.com/harrysolovay)! - Ensure 4xx Schema.Class generated even when schema empty.
+
 ## 0.4.12
 
 ### Patch Changes
