@@ -41,3 +41,27 @@ export const toComment = Option.match({
 * ${description.replace(/\*\//g, " * /").split("\n").join("\n* ")}
 */\n`,
 })
+
+// Decode an OpenAPI $ref JSON Pointer fragment into path tokens.
+// Handles RFC3986 percent-decoding and RFC6901 JSON Pointer escapes (~0/~1).
+export const decodeRefTokens = (ref: string): ReadonlyArray<string> => {
+  if (!ref) return []
+  let fragment = ref.startsWith("#") ? ref.slice(1) : ref
+  if (fragment.startsWith("/")) fragment = fragment.slice(1)
+  if (fragment.length === 0) return []
+  return fragment.split("/").map((raw) => {
+    let token = raw
+    try {
+      token = decodeURIComponent(raw)
+    } catch {
+      // leave as-is if not a valid percent-encoded sequence
+    }
+    // Unescape JSON Pointer tokens per RFC6901
+    return token.replace(/~1/g, "/").replace(/~0/g, "~")
+  })
+}
+
+export const refLastToken = (ref: string): string => {
+  const tokens = decodeRefTokens(ref)
+  return tokens.length > 0 ? tokens[tokens.length - 1] : ref
+}
