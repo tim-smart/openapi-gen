@@ -15,6 +15,16 @@ const make = Effect.gen(function* () {
   const refStore = new Map<string, JsonSchema.JsonSchema>()
 
   function cleanupSchema(schema: JsonSchema.JsonSchema) {
+    // Handle boolean schemas (true/false)
+    if (typeof schema === "boolean") {
+      return schema
+    }
+
+    // Ensure schema is an object before using 'in' operator
+    if (typeof schema !== "object" || schema === null) {
+      return schema
+    }
+
     if (
       "type" in schema &&
       Array.isArray(schema.type) &&
@@ -75,6 +85,17 @@ const make = Effect.gen(function* () {
       asStruct = true,
     ) {
       schema = cleanupSchema(schema)
+
+      // Early return for boolean schemas
+      if (typeof schema === "boolean") {
+        return
+      }
+
+      // Ensure schema is an object before property access
+      if (typeof schema !== "object" || schema === null) {
+        return
+      }
+
       const enumSuffix = childName?.endsWith("Enum") ? "" : "Enum"
       if ("$ref" in schema) {
         if (seenRefs.has(schema.$ref)) {
@@ -210,6 +231,23 @@ const make = Effect.gen(function* () {
     topLevel = false,
   ): Option.Option<string> => {
     schema = cleanupSchema(schema)
+
+    // Handle boolean schemas
+    if (typeof schema === "boolean") {
+      if (schema === true) {
+        // true = any/unknown
+        return Option.some(transformer.onUnknown({ importName }))
+      } else {
+        // false = never/no additional items - return empty/none
+        return Option.none()
+      }
+    }
+
+    // Ensure schema is an object before property access
+    if (typeof schema !== "object" || schema === null) {
+      return Option.none()
+    }
+
     if ("properties" in schema) {
       const obj = schema as JsonSchema.Object
       const required = obj.required ?? []
@@ -413,6 +451,9 @@ const make = Effect.gen(function* () {
       return { $id: "/schemas/any" }
     } else if (Array.isArray(schema)) {
       return { anyOf: schema }
+    } else if (typeof schema === "boolean") {
+      // Handle boolean schemas: false means no additional items, true means any item
+      return schema === false ? { not: {} } : { $id: "/schemas/any" }
     }
     return schema
   }
@@ -524,6 +565,8 @@ export class JsonSchemaTransformer extends Context.Tag("JsonSchemaTransformer")<
         readonly source: string
       }>
     }): string
+
+    onUnknown(options: { readonly importName: string }): string
   }
 >() {}
 
@@ -655,6 +698,9 @@ export const layerTransformerSchema = Layer.sync(JsonSchemaTransformer, () => {
     onUnion({ importName, items }) {
       return `${importName}.Union(${items.map((_) => `${toComment(_.description)}${_.source}`).join(",\n")})`
     },
+    onUnknown({ importName }) {
+      return `${importName}.Unknown`
+    },
   })
 })
 
@@ -715,6 +761,9 @@ export type ${name} = (typeof ${name})[keyof typeof ${name}];`
         return items.map((_) => _.source).join(" | ")
       }
       return `{\n  ${items.map(({ description, title, source }) => `${toComment(description)}${JSON.stringify(Option.getOrNull(title))}: ${source}`).join(",\n  ")}} as const\n`
+    },
+    onUnknown() {
+      return "unknown"
     },
   }),
 )
