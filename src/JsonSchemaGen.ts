@@ -44,8 +44,9 @@ const make = Effect.gen(function* () {
     ) {
       if ("allOf" in schema) {
         const item = schema.allOf[0]
-        schema = Struct.omit(schema, "allOf") as any
-        Object.assign(schema, item)
+        const baseSchema = Struct.omit(schema, "allOf") as any
+        // Merge the schemas properly instead of overwriting
+        schema = mergeSchemas(baseSchema, item as any) as any
       } else if ("anyOf" in schema) {
         const item = schema.anyOf[0]
         schema = Struct.omit(schema, "anyOf") as any
@@ -96,7 +97,7 @@ const make = Effect.gen(function* () {
         addRefs(resolved.schema, resolved.name)
         store.set(resolved.name, resolved.schema)
         classes.add(resolved.name)
-      } else if ("properties" in schema) {
+      } else if ("properties" in schema && schema.properties) {
         Object.entries(schema.properties).forEach(([name, s]) =>
           addRefs(s, childName ? childName + identifier(name) : undefined),
         )
@@ -138,7 +139,9 @@ const make = Effect.gen(function* () {
       return identifier(root.$ref.split("/").pop()!)
     } else {
       addRefs(root, "properties" in root ? name : undefined)
-      store.set(name, root)
+      // If the schema has allOf, store the resolved version instead of the original
+      const resolvedRoot = "allOf" in root ? resolveAllOf(root, { ...root, ...context }) : root
+      store.set(name, resolvedRoot)
       if (!asStruct) {
         classes.add(name)
       }
@@ -188,7 +191,8 @@ const make = Effect.gen(function* () {
     schema: JsonSchema.JsonSchema,
   ): JsonSchema.JsonSchema => {
     if ("allOf" in schema) {
-      let out = {} as JsonSchema.JsonSchema
+      // Start with the schema itself (excluding allOf) to preserve any direct properties
+      let out = Struct.omit(schema, "allOf") as JsonSchema.JsonSchema
       for (const member of schema.allOf) {
         let s = getSchema(member as any)
         if ("allOf" in s) {
@@ -723,16 +727,16 @@ function mergeSchemas(
   self: JsonSchema.JsonSchema,
   other: JsonSchema.JsonSchema,
 ): JsonSchema.JsonSchema {
-  if ("properties" in self && "properties" in other) {
+  if ("properties" in self || "properties" in other) {
     return {
       ...other,
       ...self,
       properties: {
-        ...other.properties,
-        ...self.properties,
+        ...(other as any).properties,
+        ...(self as any).properties,
       },
-      required: [...(other.required || []), ...(self.required || [])],
-    }
+      required: [...((other as any).required || []), ...((self as any).required || [])],
+    } as any
   } else if ("anyOf" in self && "anyOf" in other) {
     return {
       ...other,
@@ -764,10 +768,13 @@ function resolveAllOf(
       if (schema.allOf.length === 0) {
         return out
       }
-      Object.assign(out, schema.allOf[0])
+      // Merge the schemas properly instead of overwriting
+      const resolvedMember = resolveAllOf(schema.allOf[0] as any, context, resolveRefs)
+      out = mergeSchemas(out, resolvedMember) as any
       return resolveAllOf(out, context, resolveRefs)
     }
-    let out = {} as JsonSchema.JsonSchema
+    // Start with the schema itself (excluding allOf) to preserve any direct properties
+    let out = Struct.omit(schema, "allOf") as JsonSchema.JsonSchema
     for (const member of schema.allOf) {
       out = mergeSchemas(out, resolveAllOf(member as any, context, resolveRefs))
     }
