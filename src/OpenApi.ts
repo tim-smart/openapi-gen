@@ -1,6 +1,7 @@
 import type {
   OpenAPISpec,
   OpenAPISpecMethodName,
+  OpenAPISpecParameter,
   OpenAPISpecPathItem,
 } from "@effect/platform/OpenApi"
 import * as Effect from "effect/Effect"
@@ -128,10 +129,21 @@ export const make = Effect.gen(function* () {
               paramsOptional: true,
             }
             const schemaId = identifier(operation.operationId ?? path)
-            const validParameters =
-              operation.parameters?.filter(
-                (_) => _.in !== "path" && _.in !== "cookie",
-              ) ?? []
+
+            // Merge path-level parameters with operation-level parameters
+            // Path-level parameters are part of OpenAPI 3.0 spec but not typed in @effect/platform
+            const pathParameters =
+              (
+                methods as OpenAPISpecParameter & {
+                  parameters?: Array<OpenAPISpecParameter>
+                }
+              ).parameters ?? []
+            const operationParameters = operation.parameters ?? []
+            const allParameters = [...pathParameters, ...operationParameters]
+            const validParameters = allParameters.filter(
+              (_) => _.in !== "path" && _.in !== "cookie",
+            )
+
             if (validParameters.length > 0) {
               const schema: JsonSchema.Object = {
                 type: "object",
