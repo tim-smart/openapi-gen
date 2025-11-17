@@ -132,6 +132,7 @@ export const make = Effect.gen(function* () {
 
             // Merge path-level parameters with operation-level parameters
             // Path-level parameters are part of OpenAPI 3.0 spec but not typed in @effect/platform
+            // This is needed until https://github.com/Effect-TS/effect/issues/5760 is resolved
             const pathParameters =
               (
                 methods as OpenAPISpecParameter & {
