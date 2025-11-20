@@ -10,7 +10,7 @@
   "scripts": {
     "version": "changeset version",
     "release": "pnpm run build && changeset publish",
-    "test": "pnpm coverage",
+    "test": "vitest run",
     "clean": "rm -rf dist/*",
     "build": "tsup && pnpm copy-package-json",
     "build:ts": "tsup",
@@ -29,6 +29,7 @@
     "@effect/cli": "^0.61.3",
     "@effect/platform": "^0.82.3",
     "@effect/platform-node": "^0.81.0",
+    "@effect/vitest": "^0.27.0",
     "@types/node": "^22.15.18",
     "@types/swagger2openapi": "^7.0.4",
     "effect": "^3.15.2",
@@ -36,7 +37,8 @@
     "swagger2openapi": "^7.0.8",
     "tsup": "^8.4.0",
     "tsx": "^4.19.4",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^4.0.8"
   },
   "dependencies": {
     "yaml": "^2.8.0"
