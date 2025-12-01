@@ -78,7 +78,6 @@ export const make = Effect.gen(function* () {
       options: {
         readonly name: string
         readonly typeOnly: boolean
-        readonly withResponse: boolean
       },
     ) {
       if (isV2(spec)) {
