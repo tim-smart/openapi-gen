@@ -281,7 +281,7 @@ export const layerTransformerSchema = Layer.sync(OpenApiTransformer, () => {
   const operationsToInterface = (
     name: string,
     operations: ReadonlyArray<ParsedOperation>,
-  ) => `export interface ${name}<Options extends MakeOptions> {
+  ) => `export interface ${name}<Options extends MakeOptions = {}> {
   readonly httpClient: HttpClient.HttpClient
   ${operations.map((op) => operationToMethod(name, op)).join("\n  ")}
 }
