@@ -78,6 +78,7 @@ export const make = Effect.gen(function* () {
       options: {
         readonly name: string
         readonly typeOnly: boolean
+        readonly withResponse: boolean
       },
     ) {
       if (isV2(spec)) {
@@ -280,7 +281,7 @@ export const layerTransformerSchema = Layer.sync(OpenApiTransformer, () => {
   const operationsToInterface = (
     name: string,
     operations: ReadonlyArray<ParsedOperation>,
-  ) => `export interface ${name} {
+  ) => `export interface ${name}<Options extends MakeOptions> {
   readonly httpClient: HttpClient.HttpClient
   ${operations.map((op) => operationToMethod(name, op)).join("\n  ")}
 }
@@ -327,18 +328,25 @@ ${clientErrorSource(name)}`
         ),
       )
     }
-    return `${toComment(operation.description)}readonly "${operation.id}": (${args.join(", ")}) => Effect.Effect<${success}, ${errors.join(" | ")}>`
+    return `${toComment(operation.description)}readonly "${operation.id}": (${args.join(", ")}) => Effect.Effect<WithResponse<Options, ${success}>, ${errors.join(" | ")}>`
   }
 
   const operationsToImpl = (
     name: string,
     operations: ReadonlyArray<ParsedOperation>,
-  ) => `export const make = (
+  ) => `export type MakeOptions = {
+  readonly includeResponse?: boolean | undefined
+  readonly transformClient?: ((client: HttpClient.HttpClient) => Effect.Effect<HttpClient.HttpClient>) | undefined
+}
+
+export type WithResponse<Options extends MakeOptions, A> = Options extends { readonly includeResponse: true }
+  ? [A, HttpClientResponse.HttpClientResponse]
+  : A
+
+export const make = <Options extends MakeOptions = {}>(
   httpClient: HttpClient.HttpClient, 
-  options: {
-    readonly transformClient?: ((client: HttpClient.HttpClient) => Effect.Effect<HttpClient.HttpClient>) | undefined
-  } = {}
-): ${name} => {
+  options?: Options
+): ${name}<Options> => {
   ${commonSource}
   const decodeSuccess =
     <A, I, R>(schema: S.Schema<A, I, R>) =>
@@ -438,7 +446,7 @@ export const layerTransformerTs = Layer.sync(OpenApiTransformer, () => {
   const operationsToInterface = (
     name: string,
     operations: ReadonlyArray<ParsedOperation>,
-  ) => `export interface ${name} {
+  ) => `export interface ${name}<Options extends MakeOptions> {
   readonly httpClient: HttpClient.HttpClient
   ${operations.map((s) => operationToMethod(name, s)).join("\n  ")}
 }
@@ -626,19 +634,26 @@ const commonSource = `const unexpectedStatus = (response: HttpClientResponse.Htt
           }),
         ),
     )
-  const withResponse: <A, E>(
+  const withResponse = <A, E>(
     f: (response: HttpClientResponse.HttpClientResponse) => Effect.Effect<A, E>,
-  ) => (
+  ): (
     request: HttpClientRequest.HttpClientRequest,
-  ) => Effect.Effect<any, any> = options.transformClient
-    ? (f) => (request) =>
+  ) => Effect.Effect<any, any> => {
+    const includeResponse = (
+      options?.includeResponse 
+        ? (response: HttpClientResponse.HttpClientResponse) => Effect.map(f(response), (a) => [a, response])
+        : (response: HttpClientResponse.HttpClientResponse) => f(response)
+    ) as any
+    return options?.transformClient
+      ? (request) => 
         Effect.flatMap(
           Effect.flatMap(options.transformClient!(httpClient), (client) =>
             client.execute(request),
           ),
-          f,
+          includeResponse,
         )
-    : (f) => (request) => Effect.flatMap(httpClient.execute(request), f)`
+      : (request) => Effect.flatMap(httpClient.execute(request), includeResponse)
+  }`
 
 const clientErrorSource = (
   name: string,
