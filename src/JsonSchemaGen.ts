@@ -160,9 +160,14 @@ const make = Effect.gen(function* () {
       isClass,
       isEnum,
     })
-    return toSource(importName, Object.keys(schema).length ? schema : {
-      properties: {},
-    } as JsonSchema.JsonSchema, name, topLevel).pipe(
+    return toSource(
+      importName,
+      Object.keys(schema).length
+        ? schema
+        : ({ properties: {} } as JsonSchema.JsonSchema),
+      name,
+      topLevel,
+    ).pipe(
       Option.map((source) =>
         transformer.onTopLevel({
           importName,
@@ -545,7 +550,7 @@ export const layerTransformerSchema = Layer.sync(JsonSchemaTransformer, () => {
       }
       const defaultSource =
         options.default !== undefined && options.default !== null
-          ? `() => ${JSON.stringify(options.default)} as const`
+          ? `() => (${JSON.stringify(options.default)} as const)`
           : undefined
       if (options.isOptional) {
         return defaultSource
