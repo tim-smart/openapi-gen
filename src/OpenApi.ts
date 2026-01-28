@@ -327,14 +327,14 @@ ${clientErrorSource(name)}`
         ),
       )
     }
-    return `${toComment(operation.description)}readonly "${operation.id}": (${args.join(", ")}) => Effect.Effect<${success}, ${errors.join(" | ")}>`
+    return `${toComment(operation.description)}readonly "${operation.id}": (${args.join(", ")}) => Effect.Effect<${success}, ${errors.join(" | ")}, Scope.Scope>`
   }
 
   const operationsToImpl = (
     name: string,
     operations: ReadonlyArray<ParsedOperation>,
   ) => `export const make = (
-  httpClient: HttpClient.HttpClient, 
+  httpClient: HttpClient.HttpClient,
   options: {
     readonly transformClient?: ((client: HttpClient.HttpClient) => Effect.Effect<HttpClient.HttpClient>) | undefined
   } = {}
@@ -386,7 +386,7 @@ ${clientErrorSource(name)}`
     const payloadVarName = operation.params ? "options.payload" : "options"
     if (operation.payloadFormData) {
       pipeline.push(
-        `HttpClientRequest.bodyFormDataRecord(${payloadVarName} as any)`,
+        `HttpClientRequest.bodyFormData(${payloadVarName} as any)`,
       )
     } else if (operation.payload) {
       pipeline.push(`HttpClientRequest.bodyUnsafeJson(${payloadVarName})`)
@@ -428,6 +428,7 @@ ${clientErrorSource(name)}`
       'import * as Effect from "effect/Effect"',
       'import type { ParseError } from "effect/ParseResult"',
       'import * as S from "effect/Schema"',
+      'import type * as Scope from "effect/Scope"',
     ].join("\n"),
     toTypes: operationsToInterface,
     toImplementation: operationsToImpl,
@@ -481,14 +482,14 @@ ${clientErrorSource(name)}`
         errors.push(`${name}Error<"${schema}", ${schema}>`)
       }
     }
-    return `${toComment(operation.description)}readonly "${operation.id}": (${args.join(", ")}) => Effect.Effect<${success}, ${errors.join(" | ")}>`
+    return `${toComment(operation.description)}readonly "${operation.id}": (${args.join(", ")}) => Effect.Effect<${success}, ${errors.join(" | ")}, Scope.Scope>`
   }
 
   const operationsToImpl = (
     name: string,
     operations: ReadonlyArray<ParsedOperation>,
   ) => `export const make = (
-  httpClient: HttpClient.HttpClient, 
+  httpClient: HttpClient.HttpClient,
   options: {
     readonly transformClient?: ((client: HttpClient.HttpClient) => Effect.Effect<HttpClient.HttpClient>) | undefined
   } = {}
@@ -563,7 +564,7 @@ ${clientErrorSource(name)}`
     const payloadVarName = operation.params ? "options.payload" : "options"
     if (operation.payloadFormData) {
       pipeline.push(
-        `HttpClientRequest.bodyFormDataRecord(${payloadVarName} as any)`,
+        `HttpClientRequest.bodyFormData(${payloadVarName} as any)`,
       )
     } else if (operation.payload) {
       pipeline.push(`HttpClientRequest.bodyUnsafeJson(${payloadVarName})`)
@@ -597,6 +598,7 @@ ${clientErrorSource(name)}`
       'import * as HttpClientResponse from "@effect/platform/HttpClientResponse"',
       'import * as Data from "effect/Data"',
       'import * as Effect from "effect/Effect"',
+      'import type * as Scope from "effect/Scope"',
     ].join("\n"),
     toTypes: operationsToInterface,
     toImplementation: operationsToImpl,
@@ -630,7 +632,7 @@ const commonSource = `const unexpectedStatus = (response: HttpClientResponse.Htt
     f: (response: HttpClientResponse.HttpClientResponse) => Effect.Effect<A, E>,
   ) => (
     request: HttpClientRequest.HttpClientRequest,
-  ) => Effect.Effect<any, any> = options.transformClient
+  ) => Effect.Effect<any, any, Scope.Scope> = options.transformClient
     ? (f) => (request) =>
         Effect.flatMap(
           Effect.flatMap(options.transformClient!(httpClient), (client) =>
