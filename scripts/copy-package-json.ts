@@ -1,11 +1,10 @@
-import * as NodeFileSystem from "@effect/platform-node/NodeFileSystem"
-import { FileSystem } from "@effect/platform/FileSystem"
 import { Effect, pipe } from "effect"
+import { FileSystem } from "effect/FileSystem"
+import { NodeFileSystem } from "@effect/platform-node"
 import * as path from "node:path"
 
 const read = pipe(
-  FileSystem,
-  Effect.flatMap((fileSystem) => fileSystem.readFileString("package.json")),
+  FileSystem.use((fs) => fs.readFileString("package.json")),
   Effect.map((_) => JSON.parse(_)),
   Effect.map((json) => ({
     name: json.name,
@@ -23,11 +22,8 @@ const read = pipe(
 const pathTo = path.join("dist", "package.json")
 
 const write = (pkg: object) =>
-  pipe(
-    FileSystem,
-    Effect.flatMap((fileSystem) =>
-      fileSystem.writeFileString(pathTo, JSON.stringify(pkg, null, 2)),
-    ),
+  FileSystem.use((fileSystem) =>
+    fileSystem.writeFileString(pathTo, JSON.stringify(pkg, null, 2)),
   )
 
 const program = pipe(
