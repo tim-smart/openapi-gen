@@ -295,15 +295,15 @@ ${clientErrorSource(name)}`
     let options: Array<string> = []
     if (operation.params && !operation.payload) {
       args.push(
-        `options${operation.paramsOptional ? "?" : ""}: typeof ${operation.params}.Encoded${operation.paramsOptional ? " | undefined" : ""}`,
+        `options${operation.paramsOptional ? "?" : ""}: S.Schema.Encoded<typeof ${operation.params}>${operation.paramsOptional ? " | undefined" : ""}`,
       )
     } else if (operation.params) {
       options.push(
-        `readonly params${operation.paramsOptional ? "?" : ""}: typeof ${operation.params}.Encoded${operation.paramsOptional ? " | undefined" : ""}`,
+        `readonly params${operation.paramsOptional ? "?" : ""}: S.Schema.Encoded<typeof ${operation.params}>${operation.paramsOptional ? " | undefined" : ""}`,
       )
     }
     if (operation.payload) {
-      const type = `typeof ${operation.payload}.Encoded`
+      const type = `S.Schema.Encoded<typeof ${operation.payload}>`
       if (!operation.params) {
         args.push(`options: ${type}`)
       } else {
@@ -316,14 +316,15 @@ ${clientErrorSource(name)}`
     let success = "void"
     if (operation.successSchemas.size > 0) {
       success = Array.from(operation.successSchemas.values())
-        .map((schema) => `typeof ${schema}.Type`)
+        .map((schema) => `S.Schema.Type<typeof ${schema}>`)
         .join(" | ")
     }
     const errors = ["HttpClientError.HttpClientError", "ParseError"]
     if (operation.errorSchemas.size > 0) {
       errors.push(
         ...Array.from(operation.errorSchemas.values()).map(
-          (schema) => `${name}Error<"${schema}", typeof ${schema}.Type>`,
+          (schema) =>
+            `${name}Error<"${schema}", S.Schema.Type<typeof ${schema}>>`,
         ),
       )
     }
@@ -349,7 +350,7 @@ ${clientErrorSource(name)}`
     (response: HttpClientResponse.HttpClientResponse) =>
       Effect.flatMap(
         HttpClientResponse.schemaBodyJson(schema)(response),
-        (cause) => Effect.fail(${name}Error(tag, cause, response)),
+        (cause: A) => Effect.fail(${name}Error(tag, cause, response)),
       )
   return {
     httpClient,
@@ -616,7 +617,7 @@ const processPath = (path: string) => {
 const commonSource = `const unexpectedStatus = (response: HttpClientResponse.HttpClientResponse) =>
     Effect.flatMap(
       Effect.orElseSucceed(response.json, () => "Unexpected status code"),
-      (description) =>
+      (description: unknown) =>
         Effect.fail(
           new HttpClientError.ResponseError({
             request: response.request,
@@ -633,7 +634,7 @@ const commonSource = `const unexpectedStatus = (response: HttpClientResponse.Htt
   ) => Effect.Effect<any, any> = options.transformClient
     ? (f) => (request) =>
         Effect.flatMap(
-          Effect.flatMap(options.transformClient!(httpClient), (client) =>
+          Effect.flatMap(options.transformClient!(httpClient), (client: HttpClient.HttpClient) =>
             client.execute(request),
           ),
           f,
@@ -654,7 +655,16 @@ class ${name}ErrorImpl extends Data.Error<{
   cause: any
   request: HttpClientRequest.HttpClientRequest
   response: HttpClientResponse.HttpClientResponse
-}> {}
+}> {
+  constructor(args: {
+    _tag: string
+    cause: any
+    request: HttpClientRequest.HttpClientRequest
+    response: HttpClientResponse.HttpClientResponse
+  }) {
+    super(args as any)
+  }
+}
 
 export const ${name}Error = <Tag extends string, E>(
   tag: Tag,

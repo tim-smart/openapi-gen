@@ -181,9 +181,17 @@ const make = Effect.gen(function* () {
       isClass,
       isEnum,
     })
-    return toSource(importName, Object.keys(schema).length ? schema : {
-      properties: {},
-    } as JsonSchema.JsonSchema, name, topLevel).pipe(
+    return toSource(
+      importName,
+      Object.keys(schema).length
+        ? schema
+        : ({
+            properties: {},
+          } as JsonSchema.JsonSchema),
+      name,
+      topLevel,
+      true,
+    ).pipe(
       Option.map((source) =>
         transformer.onTopLevel({
           importName,
@@ -229,6 +237,7 @@ const make = Effect.gen(function* () {
     schema: JsonSchema.JsonSchema,
     currentIdentifier: string,
     topLevel = false,
+    isRoot = false,
   ): Option.Option<string> => {
     schema = cleanupSchema(schema)
 
@@ -296,11 +305,15 @@ const make = Effect.gen(function* () {
         }),
       )
     } else if ("enum" in schema) {
-      if (!topLevel && enums.has(currentIdentifier)) {
+      if (!isRoot && !topLevel && enums.has(currentIdentifier)) {
         return Option.some(
           transformer.onRef({ importName, name: currentIdentifier }),
         )
-      } else if (!topLevel && enums.has(currentIdentifier + "Enum")) {
+      } else if (
+        !isRoot &&
+        !topLevel &&
+        enums.has(currentIdentifier + "Enum")
+      ) {
         return Option.some(
           transformer.onRef({ importName, name: currentIdentifier + "Enum" }),
         )
@@ -324,9 +337,10 @@ const make = Effect.gen(function* () {
         { type: "object", ...schema } as any,
         currentIdentifier,
         topLevel,
+        isRoot,
       )
     } else if ("allOf" in schema) {
-      if (store.has(currentIdentifier)) {
+      if (!isRoot && !topLevel && store.has(currentIdentifier)) {
         return Option.some(
           transformer.onRef({ importName, name: currentIdentifier }),
         )
@@ -341,6 +355,7 @@ const make = Effect.gen(function* () {
         flattened,
         currentIdentifier + "Enum",
         topLevel,
+        isRoot,
       )
     } else if ("anyOf" in schema || "oneOf" in schema) {
       let itemSchemas =
