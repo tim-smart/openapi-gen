@@ -181,9 +181,16 @@ const make = Effect.gen(function* () {
       isClass,
       isEnum,
     })
-    return toSource(importName, Object.keys(schema).length ? schema : {
-      properties: {},
-    } as JsonSchema.JsonSchema, name, topLevel).pipe(
+    return toSource(
+      importName,
+      Object.keys(schema).length
+        ? schema
+        : ({
+            properties: {},
+          } as JsonSchema.JsonSchema),
+      name,
+      topLevel,
+    ).pipe(
       Option.map((source) =>
         transformer.onTopLevel({
           importName,
