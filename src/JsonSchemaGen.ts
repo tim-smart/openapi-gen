@@ -5,7 +5,7 @@ import * as Option from "effect/Option"
 import * as Layer from "effect/Layer"
 import * as Arr from "effect/Array"
 import { pipe } from "effect/Function"
-import { identifier, nonEmptyString, toComment } from "./Utils"
+import { identifier, nonEmptyString, toComment, decodeRefTokens, refLastToken } from "./Utils"
 import * as Struct from "effect/Struct"
 
 const make = Effect.gen(function* () {
@@ -156,7 +156,7 @@ const make = Effect.gen(function* () {
 
     if ("$ref" in root) {
       addRefs(root, undefined, false)
-      return identifier(root.$ref.split("/").pop()!)
+      return identifier(refLastToken(root.$ref))
     } else {
       addRefs(root, "properties" in root ? name : undefined)
       store.set(name, root)
@@ -316,7 +316,7 @@ const make = Effect.gen(function* () {
       if (!schema.$ref.startsWith("#")) {
         return Option.none()
       }
-      const name = identifier(schema.$ref.split("/").pop()!)
+      const name = identifier(refLastToken(schema.$ref))
       return Option.some(transformer.onRef({ importName, name }))
     } else if ("properties" in schema) {
       return toSource(
@@ -838,7 +838,7 @@ function resolveRef(
   if (!schema.$ref.startsWith("#")) {
     return
   }
-  const path = schema.$ref.slice(2).split("/")
+  const path = decodeRefTokens(schema.$ref)
   const name = identifier(path[path.length - 1])
 
   let current = context

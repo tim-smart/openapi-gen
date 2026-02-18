@@ -8,7 +8,7 @@ import * as Layer from "effect/Layer"
 import * as JsonSchemaGen from "./JsonSchemaGen.js"
 import type * as JsonSchema from "@effect/platform/OpenApiJsonSchema"
 import type { DeepMutable } from "effect/Types"
-import { camelize, identifier, nonEmptyString, toComment } from "./Utils.js"
+import { camelize, identifier, nonEmptyString, toComment, decodeRefTokens } from "./Utils.js"
 import { convertObj } from "swagger2openapi"
 import * as Context from "effect/Context"
 import * as Option from "effect/Option"
@@ -91,7 +91,7 @@ export const make = Effect.gen(function* () {
       const operations: Array<ParsedOperation> = []
 
       function resolveRef(ref: string) {
-        const parts = ref.split("/").slice(1)
+        const parts = decodeRefTokens(ref)
         let current: any = spec
         for (const part of parts) {
           current = current[part]
