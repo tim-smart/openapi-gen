@@ -5,7 +5,13 @@ import * as Option from "effect/Option"
 import * as Layer from "effect/Layer"
 import * as Arr from "effect/Array"
 import { pipe } from "effect/Function"
-import { identifier, nonEmptyString, toComment, decodeRefTokens, refLastToken } from "./Utils"
+import {
+  identifier,
+  nonEmptyString,
+  toComment,
+  decodeRefTokens,
+  refLastToken,
+} from "./Utils"
 import * as Struct from "effect/Struct"
 
 const make = Effect.gen(function* () {
@@ -161,7 +167,8 @@ const make = Effect.gen(function* () {
     } else {
       addRefs(root, "properties" in root ? name : undefined)
       // If the schema has allOf, store the resolved version instead of the original
-      const resolvedRoot = "allOf" in root ? resolveAllOf(root, { ...root, ...context }) : root
+      const resolvedRoot =
+        "allOf" in root ? resolveAllOf(root, { ...root, ...context }) : root
       store.set(name, resolvedRoot)
       if (!asStruct) {
         classes.add(name)
@@ -462,7 +469,7 @@ const make = Effect.gen(function* () {
       return { anyOf: schema }
     } else if (typeof schema === "boolean") {
       // Handle boolean schemas: false means no additional items, true means any item
-      return schema === false ? { not: {} } : { $id: "/schemas/any" }
+      return schema === false ? ({ not: {} } as any) : { $id: "/schemas/any" }
     }
     return schema
   }
@@ -789,7 +796,10 @@ function mergeSchemas(
         ...(other as any).properties,
         ...(self as any).properties,
       },
-      required: [...((other as any).required || []), ...((self as any).required || [])],
+      required: [
+        ...((other as any).required || []),
+        ...((self as any).required || []),
+      ],
     } as any
   } else if ("anyOf" in self && "anyOf" in other) {
     return {
@@ -823,7 +833,11 @@ function resolveAllOf(
         return out
       }
       // Merge the schemas properly instead of overwriting
-      const resolvedMember = resolveAllOf(schema.allOf[0] as any, context, resolveRefs)
+      const resolvedMember = resolveAllOf(
+        schema.allOf[0] as any,
+        context,
+        resolveRefs,
+      )
       out = mergeSchemas(out, resolvedMember) as any
       return resolveAllOf(out, context, resolveRefs)
     }

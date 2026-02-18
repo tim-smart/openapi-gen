@@ -11,7 +11,7 @@
       default = pkgs.mkShell {
         packages = with pkgs; [
           corepack
-          nodejs
+          nodejs_24
         ];
       };
     });
