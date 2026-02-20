@@ -22,8 +22,8 @@ importers:
         specifier: ^0.74.0
         version: 0.74.0
       '@effect/platform-node':
-        specifier: 4.0.0-beta.3
-        version: 4.0.0-beta.3(effect@4.0.0-beta.3)(ioredis@5.9.3)
+        specifier: 4.0.0-beta.7
+        version: 4.0.0-beta.7(effect@4.0.0-beta.7)(ioredis@5.9.3)
       '@types/node':
         specifier: ^22.15.18
         version: 22.15.18
@@ -31,8 +31,8 @@ importers:
         specifier: ^7.0.4
         version: 7.0.4
       effect:
-        specifier: 4.0.0-beta.3
-        version: 4.0.0-beta.3
+        specifier: 4.0.0-beta.7
+        version: 4.0.0-beta.7
       prettier:
         specifier: ^3.5.3
         version: 3.5.3
@@ -121,17 +121,17 @@ packages:
     resolution: {integrity: sha512-ZqOvxCUo70WtnV8Kf4ORcEW6euepPn3Yu9btB0vpDhN5ydf1RC3/kl2M2b22tzB0MOITeJzNn5HK7w7NJhQFaw==}
     hasBin: true
 
-  '@effect/platform-node-shared@4.0.0-beta.3':
-    resolution: {integrity: sha512-0K2djycHAtgks3+ALYR3+rachlc/MJ/AKwvnQ81iolczW3eMuHVdCi4gTZcTm2GLbDI5NcgJEOhOoLR1ttt+9A==}
+  '@effect/platform-node-shared@4.0.0-beta.7':
+    resolution: {integrity: sha512-vUPd6UdT5IhlmlxgGLxkfky+sBk2VO8sQH3JrGG3UxALbOknUVA3BSKxuAx6QdkMUOOS3QXzlNaHCIdIqpWRcw==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
-      effect: ^4.0.0-beta.3
+      effect: ^4.0.0-beta.7
 
-  '@effect/platform-node@4.0.0-beta.3':
-    resolution: {integrity: sha512-NGkT38g4DFstZylbcDWHFd2M/wMie/eXYQc1VAZui/Ab2u0IN7JnqNJ6DkZuisIGdUqEb5h07G81CGOxDE86dg==}
+  '@effect/platform-node@4.0.0-beta.7':
+    resolution: {integrity: sha512-cPuYxwEyz/ZymXf6Kkr4hH/t6W4x5cpOqNT437rGs5TIsdWSGACYQbpaV9r7Qj6Vb1XPBggQVy8jW6vr12jEKA==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
-      effect: ^4.0.0-beta.3
+      effect: ^4.0.0-beta.7
       ioredis: ^5.7.0
 
   '@esbuild/aix-ppc64@0.25.1':
@@ -757,8 +757,8 @@ packages:
   eastasianwidth@0.2.0:
     resolution: {integrity: sha512-I88TYZWc9XiYHRQ4/3c5rjjfgkjhLyW2luGIheGERbNQ6OY7yTybanSpDXZa8y7VUP9YmDcYa+eyq4ca7iLqWA==}
 
-  effect@4.0.0-beta.3:
-    resolution: {integrity: sha512-hSc3GKzm7qK6c7MDrX/+rtSlds3+TJXvOJ6JmraQqEMeNHdu2tsrPbfAHt0ppfJAWzd6EipcXlTgEEMHw8V0fA==}
+  effect@4.0.0-beta.7:
+    resolution: {integrity: sha512-RWVtCYlRqMQzNdLXXnOjICf7yDrQEwlyw49+DBh08YPPEBjquHo0N8n6zxLg0yl2FHCFgTJAqKel/zDQ8MVi4Q==}
 
   emoji-regex@8.0.0:
     resolution: {integrity: sha512-MSjYzcWNOA0ewAHpz0MxpYFvwg6yjy1NG3xteoqz644VCo/RPgnr1/GGt+ic3iJTzQ8Eu3TdM14SawnVUmGE6A==}
@@ -1599,19 +1599,19 @@ snapshots:
 
   '@effect/language-service@0.74.0': {}
 
-  '@effect/platform-node-shared@4.0.0-beta.3(effect@4.0.0-beta.3)':
+  '@effect/platform-node-shared@4.0.0-beta.7(effect@4.0.0-beta.7)':
     dependencies:
       '@types/ws': 8.18.1
-      effect: 4.0.0-beta.3
+      effect: 4.0.0-beta.7
       ws: 8.19.0
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
 
-  '@effect/platform-node@4.0.0-beta.3(effect@4.0.0-beta.3)(ioredis@5.9.3)':
+  '@effect/platform-node@4.0.0-beta.7(effect@4.0.0-beta.7)(ioredis@5.9.3)':
     dependencies:
-      '@effect/platform-node-shared': 4.0.0-beta.3(effect@4.0.0-beta.3)
-      effect: 4.0.0-beta.3
+      '@effect/platform-node-shared': 4.0.0-beta.7(effect@4.0.0-beta.7)
+      effect: 4.0.0-beta.7
       ioredis: 5.9.3
       mime: 4.1.0
       undici: 7.22.0
@@ -2020,7 +2020,7 @@ snapshots:
 
   eastasianwidth@0.2.0: {}
 
-  effect@4.0.0-beta.3:
+  effect@4.0.0-beta.7:
     dependencies:
       '@standard-schema/spec': 1.1.0
       fast-check: 4.5.3

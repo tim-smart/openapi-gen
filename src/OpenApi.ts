@@ -30,17 +30,6 @@ const methodNames: ReadonlyArray<OpenAPISpecMethodName> = [
   "trace",
 ]
 
-const httpClientMethodNames: Record<OpenAPISpecMethodName, string> = {
-  get: "get",
-  put: "put",
-  post: "post",
-  delete: "del",
-  options: "options",
-  head: "head",
-  patch: "patch",
-  trace: `make("TRACE")`,
-}
-
 interface ParsedOperation {
   readonly id: string
   readonly method: OpenAPISpecMethodName
@@ -427,7 +416,7 @@ ${clientErrorSource(name)}`
 
     return (
       `"${operation.id}": (${params}) => ` +
-      `HttpClientRequest.${httpClientMethodNames[operation.method]}(${operation.pathTemplate})` +
+      `HttpClientRequest.${operation.method}(${operation.pathTemplate})` +
       `.pipe(\n    ${pipeline.join(",\n    ")}\n  )`
     )
   }
