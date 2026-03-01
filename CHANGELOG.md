@@ -1,5 +1,11 @@
 # @tim-smart/openapi-gen
 
+## 1.0.2
+
+### Patch Changes
+
+- [`b2cac8a`](https://github.com/tim-smart/openapi-gen/commit/b2cac8a0df2c37b3bcf63c37d2a279e17fb5a1c0) Thanks [@tim-smart](https://github.com/tim-smart)! - improve errors
+
 ## 1.0.1
 
 ### Patch Changes
