@@ -17,7 +17,7 @@ import {
 } from "./Utils.js"
 import { convertObj } from "swagger2openapi"
 import * as Option from "effect/Option"
-import * as ServiceMap from "effect/ServiceMap"
+import * as Context from "effect/Context"
 
 const methodNames: ReadonlyArray<OpenAPISpecMethodName> = [
   "get",
@@ -245,13 +245,13 @@ export const make = Effect.gen(function* () {
   return { generate } as const
 })
 
-export class OpenApi extends ServiceMap.Service<OpenApi>()("OpenApi", {
+export class OpenApi extends Context.Service<OpenApi>()("OpenApi", {
   make,
 }) {
   static Live = Layer.effect(OpenApi, make)
 }
 
-export class OpenApiTransformer extends ServiceMap.Service<
+export class OpenApiTransformer extends Context.Service<
   OpenApiTransformer,
   {
     readonly imports: string
@@ -309,7 +309,8 @@ ${clientErrorSource(name)}`
     }
     const errors = ["HttpClientError.HttpClientError"]
     if (operation.errorSchemas.size > 0) {
-      for (const schema of operation.errorSchemas.values()) {
+      const tags = new Set(operation.errorSchemas.values())
+      for (const schema of tags) {
         errors.push(`${name}Error<"${schema}", ${schema}>`)
       }
     }

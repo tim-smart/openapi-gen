@@ -13,7 +13,7 @@ import {
 } from "./Utils"
 import * as Struct from "effect/Struct"
 import * as Filter from "effect/Filter"
-import * as ServiceMap from "effect/ServiceMap"
+import * as Context from "effect/Context"
 
 const make = Effect.gen(function* () {
   const store = new Map<string, JsonSchema.JsonSchema>()
@@ -38,11 +38,19 @@ const make = Effect.gen(function* () {
       schema.type.includes("null")
     ) {
       const type = schema.type.filter((_) => _ !== "null")
-      schema = {
-        ...schema,
-        type: type.length === 1 ? type[0] : type,
-        nullable: true,
-      } as any
+      schema =
+        type.length === 0
+          ? ({ ...schema, type: "null" } as any)
+          : ({ ...schema, type, nullable: true } as any)
+    }
+
+    if (
+      "type" in schema &&
+      Array.isArray(schema.type) &&
+      !("enum" in schema) &&
+      !("const" in schema)
+    ) {
+      schema = typeArrayToAnyOf(schema)
     }
 
     if (
@@ -270,7 +278,7 @@ const make = Effect.gen(function* () {
       const required = obj.required ?? []
       const properties = pipe(
         Object.entries(obj.properties ?? {}),
-        Arr.filter(
+        Arr.filterMap(
           Filter.fromPredicateOption(([key, schema]) => {
             const fullSchema = getSchema(schema)
             schema = cleanupSchema(schema)
@@ -385,7 +393,7 @@ const make = Effect.gen(function* () {
       }
       const items = pipe(
         itemSchemas,
-        Arr.filter(
+        Arr.filterMap(
           Filter.fromPredicateOption((_) =>
             toSource(importName, _, currentIdentifier + "Enum").pipe(
               Option.map(
@@ -484,7 +492,7 @@ const make = Effect.gen(function* () {
     Effect.sync(() =>
       pipe(
         store.entries(),
-        Arr.filter(
+        Arr.filterMap(
           Filter.fromPredicateOption(([name, schema]) =>
             topLevelSource(importName, name, schema),
           ),
@@ -496,7 +504,7 @@ const make = Effect.gen(function* () {
   return { addSchema, generate } as const
 })
 
-export class JsonSchemaGen extends ServiceMap.Service<
+export class JsonSchemaGen extends Context.Service<
   JsonSchemaGen,
   Effect.Success<typeof make>
 >()("JsonSchemaGen") {}
@@ -504,7 +512,7 @@ export class JsonSchemaGen extends ServiceMap.Service<
 const with_ = Effect.provideServiceEffect(JsonSchemaGen, make)
 export { with_ as with }
 
-export class JsonSchemaTransformer extends ServiceMap.Service<
+export class JsonSchemaTransformer extends Context.Service<
   JsonSchemaTransformer,
   {
     supportsTopLevel(options: {
@@ -772,4 +780,102 @@ function filterNullable(schema: JsonSchema.JsonSchema) {
     ] as const
   }
   return [false, schema] as const
+}
+
+function typeArrayToAnyOf(
+  schema: JsonSchema.JsonSchema,
+): JsonSchema.JsonSchema {
+  const types = Array.from(
+    new Set(
+      ((schema as any).type as ReadonlyArray<unknown>).filter(
+        (type): type is string => typeof type === "string",
+      ),
+    ),
+  )
+
+  if (types.length === 0) {
+    return Struct.omit(schema as any, ["type"]) as any
+  } else if (types.length === 1 && (schema as any).nullable !== true) {
+    return { ...schema, type: types[0] } as any
+  }
+
+  const out: any = {
+    ...schemaAnnotations(schema),
+    anyOf: [
+      ...types.map((type) => schemaForType(schema, type)),
+      ...((schema as any).nullable === true ? [{ type: "null" }] : []),
+    ],
+  }
+  return out
+}
+
+function schemaAnnotations(schema: JsonSchema.JsonSchema) {
+  const out: any = {}
+  if ("title" in schema) out.title = schema.title
+  if ("description" in schema) out.description = schema.description
+  if ("default" in schema) out.default = schema.default
+  if ("examples" in schema) out.examples = schema.examples
+  return out
+}
+
+function schemaForType(
+  schema: JsonSchema.JsonSchema,
+  type: string,
+): JsonSchema.JsonSchema {
+  const source = schema as any
+  const out: any = { type }
+  switch (type) {
+    case "string":
+      copySchemaFields(source, out, [
+        "minLength",
+        "maxLength",
+        "pattern",
+        "format",
+        "contentMediaType",
+        "contentSchema",
+        "contentEncoding",
+      ])
+      break
+    case "number":
+    case "integer":
+      copySchemaFields(source, out, [
+        "minimum",
+        "exclusiveMinimum",
+        "maximum",
+        "exclusiveMaximum",
+        "multipleOf",
+        "format",
+      ])
+      break
+    case "array":
+      copySchemaFields(source, out, [
+        "items",
+        "minItems",
+        "maxItems",
+        "additionalItems",
+      ])
+      break
+    case "object":
+      copySchemaFields(source, out, [
+        "required",
+        "properties",
+        "additionalProperties",
+        "patternProperties",
+        "propertyNames",
+      ])
+      break
+  }
+  return out
+}
+
+function copySchemaFields(
+  source: Record<string, unknown>,
+  target: Record<string, unknown>,
+  fields: ReadonlyArray<string>,
+) {
+  for (const field of fields) {
+    if (field in source) {
+      target[field] = source[field]
+    }
+  }
 }
