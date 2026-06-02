@@ -41,6 +41,7 @@ interface ParsedOperation {
   readonly cookies: ReadonlyArray<string>
   readonly payload?: string
   readonly payloadFormData: boolean
+  readonly payloadUrlEncoded: boolean
   readonly pathIds: ReadonlyArray<string>
   readonly pathTemplate: string
   readonly successSchemas: ReadonlyMap<string, string>
@@ -116,6 +117,7 @@ export const make = Effect.gen(function* () {
               headers: [],
               cookies: [],
               payloadFormData: false,
+              payloadUrlEncoded: false,
               successSchemas: new Map(),
               errorSchemas: new Map(),
               voidSchemas: new Set(),
@@ -191,6 +193,16 @@ export const make = Effect.gen(function* () {
                 context,
               )
               op.payloadFormData = true
+            } else if (
+              operation.requestBody?.content?.["application/x-www-form-urlencoded"]
+            ) {
+              op.payload = gen.addSchema(
+                `${schemaId}Request`,
+                operation.requestBody.content["application/x-www-form-urlencoded"]
+                  .schema as any,
+                context,
+              )
+              op.payloadUrlEncoded = true
             }
             let defaultSchema: string | undefined
             Object.entries(operation.responses ?? {}).forEach(
@@ -397,6 +409,10 @@ ${clientErrorSource(name)}`
     if (operation.payloadFormData) {
       pipeline.push(
         `HttpClientRequest.bodyFormDataRecord(${payloadVarName} as any)`,
+      )
+    } else if (operation.payloadUrlEncoded) {
+      pipeline.push(
+        `HttpClientRequest.bodyUrlParams(${payloadVarName} as any)`,
       )
     } else if (operation.payload) {
       pipeline.push(`HttpClientRequest.bodyJsonUnsafe(${payloadVarName})`)
