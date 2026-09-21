@@ -463,14 +463,15 @@ const commonSource = `const unexpectedStatus = (response: HttpClientResponse.Htt
           }),
         ),
     )
+  const transformClient = options.transformClient;
   const withResponse: <A, E>(
     f: (response: HttpClientResponse.HttpClientResponse) => Effect.Effect<A, E>,
   ) => (
     request: HttpClientRequest.HttpClientRequest,
-  ) => Effect.Effect<any, any> = options.transformClient
+  ) => Effect.Effect<any, any> = transformClient
     ? (f) => (request) =>
         Effect.flatMap(
-          Effect.flatMap(options.transformClient!(httpClient), (client) =>
+          Effect.flatMap(transformClient(httpClient), (client) =>
             client.execute(request),
           ),
           f,
@@ -494,7 +495,7 @@ class ${name}ErrorImpl extends Data.Error<{
   request: HttpClientRequest.HttpClientRequest
   response: HttpClientResponse.HttpClientResponse
 }> {
-  name = "${name}Error"
+  override name = "${name}Error"
 }
 
 export const ${name}Error = <Tag extends string, E>(
