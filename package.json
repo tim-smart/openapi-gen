@@ -10,11 +10,12 @@
   "scripts": {
     "version": "changeset version",
     "release": "pnpm run build && changeset publish",
-    "test": "pnpm coverage",
+    "test": "tsx --test tests/*.test.ts",
     "clean": "rm -rf dist/*",
     "build": "tsup && pnpm copy-package-json",
     "build:ts": "tsup",
-    "copy-package-json": "tsx scripts/copy-package-json.ts"
+    "copy-package-json": "tsx scripts/copy-package-json.ts",
+    "prepare": "effect-tsgo patch --typescript --no-oxlint"
   },
   "repository": {
     "type": "git",
@@ -26,16 +27,15 @@
   "devDependencies": {
     "@changesets/changelog-github": "^0.5.1",
     "@changesets/cli": "^2.29.4",
-    "@effect/language-service": "^0.74.0",
-    "@effect/platform-node": "4.0.0-beta.75",
+    "@effect/platform-node": "4.0.0",
+    "@effect/tsgo": "0.47.2",
     "@types/node": "^22.15.18",
     "@types/swagger2openapi": "^7.0.4",
-    "effect": "4.0.0-beta.75",
+    "effect": "4.0.0",
     "prettier": "^3.5.3",
     "swagger2openapi": "^7.0.8",
     "tsup": "^8.4.0",
-    "tsx": "^4.19.4",
-    "typescript": "^5.8.3"
+    "typescript": "^7.0.2"
   },
   "dependencies": {
     "yaml": "^2.8.0"

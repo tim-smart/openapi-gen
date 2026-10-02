@@ -2,7 +2,7 @@ import type {
   OpenAPISpec,
   OpenAPISpecMethodName,
   OpenAPISpecPathItem,
-} from "effect/unstable/httpapi/OpenApi"
+} from "effect/http-api/OpenApi"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as JsonSchemaGen from "./JsonSchemaGen.js"
@@ -424,10 +424,10 @@ ${clientErrorSource(name)}`
 
   return OpenApiTransformer.of({
     imports: [
-      'import type * as HttpClient from "effect/unstable/http/HttpClient"',
-      'import * as HttpClientError from "effect/unstable/http/HttpClientError"',
-      'import * as HttpClientRequest from "effect/unstable/http/HttpClientRequest"',
-      'import * as HttpClientResponse from "effect/unstable/http/HttpClientResponse"',
+      'import type * as HttpClient from "effect/http/HttpClient"',
+      'import * as HttpClientError from "effect/http/HttpClientError"',
+      'import * as HttpClientRequest from "effect/http/HttpClientRequest"',
+      'import * as HttpClientResponse from "effect/http/HttpClientResponse"',
       'import * as Data from "effect/Data"',
       'import * as Effect from "effect/Effect"',
     ].join("\n"),

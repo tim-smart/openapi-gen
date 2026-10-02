@@ -4,15 +4,15 @@ import * as Layer from "effect/Layer"
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime"
 import * as NodeServices from "@effect/platform-node/NodeServices"
 import { OpenApi } from "./OpenApi.js"
-import * as Flag from "effect/unstable/cli/Flag"
-import * as Command from "effect/unstable/cli/Command"
+import * as Flag from "effect/cli/Flag"
+import * as Command from "effect/cli/Command"
 
-const spec = Flag.fileParse("spec").pipe(
+const spec = Flag.FileParse("spec").pipe(
   Flag.withAlias("s"),
   Flag.withDescription("The OpenAPI spec file to generate the client from"),
 )
 
-const name = Flag.string("name").pipe(
+const name = Flag.String("name").pipe(
   Flag.withAlias("n"),
   Flag.withDescription("The name of the generated client"),
   Flag.withDefault("Client"),
