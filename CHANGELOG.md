@@ -1,5 +1,15 @@
 # @tim-smart/openapi-gen
 
+## 1.0.5
+
+### Patch Changes
+
+- [#96](https://github.com/tim-smart/openapi-gen/pull/96) [`3396970`](https://github.com/tim-smart/openapi-gen/commit/33969701751aed59b336b587c67397dd7005f7ba) Thanks [@nikelborm](https://github.com/nikelborm)! - Removed implicit non-null assertion on `config.transformClient` that triggers
+  linters, added `override` keyword into custom error implementation to follow
+  strict ts configs with `"noImplicitOverride": true,` compiler option
+
+- [`bdbf818`](https://github.com/tim-smart/openapi-gen/commit/bdbf81874db317fdc03a3bc3b4e27cb10247c1ae) Thanks [@tim-smart](https://github.com/tim-smart)! - Update to Effect 4 stable and migrate CLI and generated HTTP client imports to the new module paths.
+
 ## 1.0.4
 
 ### Patch Changes
