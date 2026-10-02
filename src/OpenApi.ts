@@ -5,8 +5,8 @@ import type {
 } from "effect/http-api/OpenApi"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
-import * as JsonSchemaGen from "./JsonSchemaGen.js"
-import type * as JsonSchema from "./JsonSchemaTypes.js"
+import * as JsonSchemaGen from "./JsonSchemaGen.ts"
+import type * as JsonSchema from "./JsonSchemaTypes.ts"
 import type { DeepMutable } from "effect/Types"
 import {
   camelize,
@@ -14,7 +14,7 @@ import {
   nonEmptyString,
   toComment,
   decodeRefTokens,
-} from "./Utils.js"
+} from "./Utils.ts"
 import { convertObj } from "swagger2openapi"
 import * as Option from "effect/Option"
 import * as Context from "effect/Context"

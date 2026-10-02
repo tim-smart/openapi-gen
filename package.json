@@ -3,6 +3,7 @@
   "version": "1.0.4",
   "description": "Generate Effect http clients from OpenAPI specs",
   "packageManager": "pnpm@9.10.0",
+  "type": "module",
   "publishConfig": {
     "directory": "dist",
     "access": "public"
@@ -10,11 +11,11 @@
   "scripts": {
     "version": "changeset version",
     "release": "pnpm run build && changeset publish",
-    "test": "tsx --test tests/*.test.ts",
+    "test": "node --test tests/*.test.ts",
     "clean": "rm -rf dist/*",
     "build": "tsup && pnpm copy-package-json",
     "build:ts": "tsup",
-    "copy-package-json": "tsx scripts/copy-package-json.ts",
+    "copy-package-json": "node scripts/copy-package-json.ts",
     "prepare": "effect-tsgo patch --typescript --no-oxlint"
   },
   "repository": {

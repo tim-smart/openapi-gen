@@ -1,5 +1,5 @@
 import * as Effect from "effect/Effect"
-import * as JsonSchema from "./JsonSchemaTypes"
+import * as JsonSchema from "./JsonSchemaTypes.ts"
 import * as Option from "effect/Option"
 import * as Layer from "effect/Layer"
 import * as Arr from "effect/Array"
@@ -10,7 +10,7 @@ import {
   toComment,
   decodeRefTokens,
   refLastToken,
-} from "./Utils"
+} from "./Utils.ts"
 import * as Struct from "effect/Struct"
 import * as Filter from "effect/Filter"
 import * as Context from "effect/Context"

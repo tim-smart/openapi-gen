@@ -1,9 +1,8 @@
 {
   "$schema": "./node_modules/@effect/tsgo/schema.json",
   "compilerOptions": {
-    "esModuleInterop": true,
     "exactOptionalPropertyTypes": true,
-    "target": "ES2021",
+    "target": "ES2022",
     "noEmit": true,
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
@@ -17,6 +16,8 @@
     "forceConsistentCasingInFileNames": true,
     "stripInternal": true,
     "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true,
     "plugins": [
       {
         "name": "@effect/language-service",
