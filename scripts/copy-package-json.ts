@@ -10,7 +10,7 @@ const read = pipe(
     name: json.name,
     version: json.version,
     description: json.description,
-    bin: "main.js",
+    bin: json.bin.replace(/^dist\//, ""),
     repository: json.repository,
     author: json.author,
     license: json.license,

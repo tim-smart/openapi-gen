@@ -14,11 +14,9 @@
   "scripts": {
     "version": "changeset version",
     "release": "pnpm run build && changeset publish",
-    "test": "node --test tests/*.test.ts",
     "clean": "rm -rf dist/*",
-    "build": "tsup && pnpm copy-package-json",
-    "build:ts": "tsup",
-    "copy-package-json": "node scripts/copy-package-json.ts",
+    "build": "tsdown",
+    "build:ts": "tsdown",
     "prepare": "effect-tsgo patch --typescript --no-oxlint"
   },
   "repository": {
@@ -38,7 +36,8 @@
     "effect": "4.0.0",
     "prettier": "^3.5.3",
     "swagger2openapi": "^7.0.8",
-    "tsup": "^8.4.0",
+    "tsdown": "^0.23.0",
+    "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   },
   "dependencies": {
